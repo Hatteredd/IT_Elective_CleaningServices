@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+
+{% block title %}Book a Cleaning Service — CleanHome PH{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:32px; padding-bottom:60px;">
+    <div class="page-header" style="margin-bottom:24px;">
+        <div>
+            <span class="section-eyebrow">Hassle-Free Booking</span>
+            <h1 style="font-size:2rem; margin-top:4px;">Book an Appointment</h1>
+            <p style="color:var(--text-muted); font-size:0.95rem;">Select your cleaning package, pick an available slot, and confirm your address.</p>
+        </div>
+        <a href="{{ url_for('customer.dashboard') }}" class="btn btn-secondary btn-sm">← Back to Dashboard</a>
+    </div>
+
+    <div class="booking-layout">
+        <!-- Main Form -->
+        <div class="booking-form-card">
+            <form method="POST" id="bookingForm">
+                {{ form.hidden_tag() }}
+
+                <!-- Step 1: Service Selection -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <div class="step-num">1</div>
+                        <h2>Choose a Cleaning Service</h2>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        {{ form.service_id.label(class="form-label") }}
+                        {{ form.service_id(class="form-control", id="serviceSelect", style="font-size:0.95rem; font-weight:600; padding:13px 16px;") }}
+                        {% if form.service_id.errors %}
+                            <div class="error-message">⚠ {{ form.service_id.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Step 2: Interactive Add-ons Grid -->
+                <div class="form-section" id="addonsSection" style="display:none;">
+                    <div class="form-section-title">
+                        <div class="step-num">2</div>
+                        <div>
+                            <h2>Enhance with Add-ons <span style="font-size:0.82rem;font-weight:400;color:var(--text-muted);">(optional)</span></h2>
+                            <p style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;">Click any card to add it to your appointment.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden multi-select kept in sync for WTForms backend compatibility -->
+                    <div style="display:none;">
+                        {{ form.add_ons(id="addonsSelect") }}
+                    </div>
+
+                    <!-- Interactive Touch-Friendly Cards -->
+                    <div class="addons-grid" id="addonsCardsContainer">
+                        <!-- Populated dynamically via fetch -->
+                    </div>
+                </div>
+
+                <!-- Step 3: Date & Time Picker -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <div class="step-num" id="scheduleStep">3</div>
+                        <h2>Select Schedule</h2>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form.date.label }}
+                            {{ form.date(class="form-control", id="bookingDateInput") }}
+                            {% if form.date.errors %}
+                                <div class="error-message">⚠ {{ form.date.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.time.label }}
+                            {{ form.time(class="form-control", id="bookingTimeInput") }}
+                            {% if form.time.errors %}
+                                <div class="error-message">⚠ {{ form.time.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Quick Time Slots Chips -->
+                    <div class="time-slots-container">
+                        <span class="time-slots-group-label">Quick Time Slots:</span>
+                        <div class="time-slots-grid" id="timeSlotsGrid">
+                            <div class="time-slot-chip" data-time="08:00">08:00 AM</div>
+                            <div class="time-slot-chip" data-time="10:00">10:00 AM</div>
+                            <div class="time-slot-chip" data-time="13:00">01:00 PM</div>
+                            <div class="time-slot-chip" data-time="15:00">03:00 PM</div>
+                            <div class="time-slot-chip" data-time="17:00">05:00 PM</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Service Address -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <div class="step-num">4</div>
+                        <h2>Service Address</h2>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        {{ form.address_id.label }}
+                        {{ form.address_id(class="form-control", id="addressSelect") }}
+                        {% if form.address_id.errors %}
+                            <div class="error-message">⚠ {{ form.address_id.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('customer.add_address') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:6px;">
+                        <span>📍</span> + Add a new service address
+                    </a>
+                </div>
+
+                <!-- Step 5: Promo Code with Instant Verification -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <div class="step-num">5</div>
+                        <h2>Have a Promo Code? <span style="font-size:0.82rem;font-weight:400;color:var(--text-muted);">(optional)</span></h2>
+                    </div>
+                    <div class="promo-input-wrap">
+                        {{ form.promo_code(class="form-control", id="promoInput", placeholder="e.g. WELCOME10, SAVE200") }}
+                        <button type="button" class="btn-apply-promo" id="btnApplyPromo">Apply Code</button>
+                    </div>
+                    <div class="promo-feedback" id="promoFeedback"></div>
+                    {% if form.promo_code.errors %}
+                        <div class="error-message" style="margin-top:8px;">⚠ {{ form.promo_code.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Step 6: Special Notes -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <div class="step-num">6</div>
+                        <h2>Special Instructions <span style="font-size:0.82rem;font-weight:400;color:var(--text-muted);">(optional)</span></h2>
+                    </div>
+                    <div class="form-group">
+                        {{ form.notes(class="form-control", rows=3, placeholder="E.g., Please focus on bathroom tiles, ring buzzer #12, pets are inside...") }}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block btn-xl" style="font-size:1.05rem;font-weight:700;margin-top:12px;box-shadow:0 4px 16px var(--primary-glow);">
+                        Confirm &amp; Proceed to Payment →
+                    </button>
+                    <p style="text-align:center;font-size:0.82rem;color:var(--text-muted);margin-top:12px;">
+                        🔒 Secure checkout. No surprise charges. Satisfaction guaranteed.
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sticky Live Order Summary Card -->
+        <div class="booking-summary-card">
+            <div class="summary-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.25rem;">📋</span>
+                    <div>
+                        <h3 style="margin:0;font-size:1.05rem;">Order Summary</h3>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">Live price breakdown</p>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-body">
+                <div class="summary-line">
+                    <span class="label">Main Service</span>
+                    <span id="summaryService" class="font-bold" style="text-align:right;max-width:180px;">—</span>
+                </div>
+                <div class="summary-line">
+                    <span class="label">Service Rate</span>
+                    <span id="summaryServicePrice">₱0.00</span>
+                </div>
+                <div class="summary-line">
+                    <span class="label">Selected Add-ons</span>
+                    <span id="summaryAddonsCount" class="badge badge-info" style="font-size:0.75rem;">None</span>
+                </div>
+                <div id="summaryAddonsList" style="font-size:0.78rem;color:var(--text-muted);padding-left:4px;display:none;margin-bottom:8px;"></div>
+                <div class="summary-line">
+                    <span class="label">Subtotal</span>
+                    <span id="summarySubtotal" style="font-weight:600;">₱0.00</span>
+                </div>
+                <div class="summary-line" id="discountLine" style="display:none;">
+                    <span class="label" style="color:var(--success);font-weight:600;">Promo Discount</span>
+                    <span id="summaryDiscount" style="color:var(--success);font-weight:700;">-₱0.00</span>
+                </div>
+                <div class="summary-line total">
+                    <div>
+                        <span>Estimated Total</span>
+                        <div style="font-size:0.72rem;color:var(--text-muted);font-weight:400;">VAT inclusive</div>
+                    </div>
+                    <span class="value" id="summaryTotal">₱0.00</span>
+                </div>
+            </div>
+            <div class="summary-footer" style="background:var(--bg-subtle);border-top:1px solid var(--border);padding:18px 24px;">
+                <div style="display:flex;flex-direction:column;gap:8px;font-size:0.78rem;color:var(--text-body);">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--success);font-weight:700;">✓</span>
+                        <span>Background-checked professional cleaners</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--success);font-weight:700;">✓</span>
+                        <span>100% Satisfaction or free re-clean</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--success);font-weight:700;">✓</span>
+                        <span>Flexible reschedule up to 24h prior</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const serviceSelect   = document.getElementById('serviceSelect');
+    const addonsSection   = document.getElementById('addonsSection');
+    const addonsSelect    = document.getElementById('addonsSelect');
+    const addonsContainer = document.getElementById('addonsCardsContainer');
+    const scheduleStep    = document.getElementById('scheduleStep');
+    const dateInput       = document.getElementById('bookingDateInput');
+    const timeInput       = document.getElementById('bookingTimeInput');
+    const timeChips       = document.querySelectorAll('.time-slot-chip');
+    const promoInput      = document.getElementById('promoInput');
+    const btnApplyPromo   = document.getElementById('btnApplyPromo');
+    const promoFeedback   = document.getElementById('promoFeedback');
+
+    let currentDiscount = 0;
+    let appliedPromoCode = '';
+
+    // 1. Prevent past dates in booking date picker
+    if (dateInput) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', todayStr);
+        if (!dateInput.value) {
+            dateInput.value = todayStr;
+        }
+    }
+
+    // 2. Interactive Time Slot Chips
+    timeChips.forEach(chip => {
+        chip.addEventListener('click', function () {
+            timeChips.forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            if (timeInput) {
+                timeInput.value = this.dataset.time;
+            }
+        });
+    });
+
+    if (timeInput && timeInput.value) {
+        timeChips.forEach(chip => {
+            if (chip.dataset.time === timeInput.value) {
+                chip.classList.add('active');
+            }
+        });
+    }
+
+    // 3. Dynamic Add-ons rendering with interactive cards
+    serviceSelect.addEventListener('change', function () {
+        const serviceId = this.value;
+        if (!serviceId) {
+            addonsSection.style.display = 'none';
+            addonsContainer.innerHTML = '';
+            addonsSelect.innerHTML = '';
+            scheduleStep.textContent = '2';
+            updateSummary();
+            return;
+        }
+
+        fetch(`/customer/book/add-ons/${serviceId}`)
+            .then(r => r.json())
+            .then(data => {
+                addonsContainer.innerHTML = '';
+                addonsSelect.innerHTML = '';
+
+                if (data.length > 0) {
+                    addonsSection.style.display = 'block';
+                    scheduleStep.textContent = '3';
+
+                    data.forEach(item => {
+                        // Hidden option for form submission
+                        const opt = document.createElement('option');
+                        opt.value = item.id;
+                        opt.dataset.price = item.price;
+                        opt.dataset.name = item.name;
+                        opt.textContent = `${item.name} — ₱${item.price.toFixed(2)}`;
+                        addonsSelect.appendChild(opt);
+
+                        // Visual card
+                        const card = document.createElement('div');
+                        card.className = 'addon-card';
+                        card.dataset.id = item.id;
+                        card.dataset.price = item.price;
+                        card.dataset.name = item.name;
+
+                        card.innerHTML = `
+                            <div class="addon-card-top">
+                                <span class="addon-card-title">${item.name}</span>
+                                <div class="addon-card-check">✓</div>
+                            </div>
+                            <div class="addon-card-desc">${item.description || 'Premium service add-on for enhanced results.'}</div>
+                            <div class="addon-card-price">+₱${item.price.toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+                        `;
+
+                        card.addEventListener('click', function () {
+                            this.classList.toggle('selected');
+                            const isSelected = this.classList.contains('selected');
+                            
+                            // Sync hidden select
+                            Array.from(addonsSelect.options).forEach(o => {
+                                if (String(o.value) === String(item.id)) {
+                                    o.selected = isSelected;
+                                }
+                            });
+
+                            updateSummary();
+                            // Re-validate promo if code is entered
+                            if (promoInput.value.trim()) {
+                                validatePromoCode(false);
+                            }
+                        });
+
+                        addonsContainer.appendChild(card);
+                    });
+                } else {
+                    addonsSection.style.display = 'none';
+                    scheduleStep.textContent = '2';
+                }
+
+                updateSummary();
+            })
+            .catch(err => {
+                console.error('Failed to load add-ons:', err);
+            });
+    });
+
+    // 4. Live Promo Code Validation
+    btnApplyPromo.addEventListener('click', function () {
+        validatePromoCode(true);
+    });
+
+    promoInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            validatePromoCode(true);
+        }
+    });
+
+    function validatePromoCode(showNotification) {
+        const code = promoInput.value.trim().toUpperCase();
+        const serviceId = serviceSelect.value;
+        const subtotal = calculateCurrentSubtotal();
+
+        if (!code) {
+            currentDiscount = 0;
+            appliedPromoCode = '';
+            promoFeedback.style.display = 'none';
+            updateSummary();
+            return;
+        }
+
+        fetch(`/customer/book/validate-promo?code=${encodeURIComponent(code)}&service_id=${serviceId}&subtotal=${subtotal}`)
+            .then(r => r.json())
+            .then(res => {
+                if (res.valid) {
+                    currentDiscount = res.discount_amount;
+                    appliedPromoCode = res.code;
+                    promoFeedback.className = 'promo-feedback success';
+                    promoFeedback.innerHTML = `<span>✓</span> <strong>${res.message}</strong>`;
+                } else {
+                    currentDiscount = 0;
+                    appliedPromoCode = '';
+                    promoFeedback.className = 'promo-feedback error';
+                    promoFeedback.innerHTML = `<span>⚠</span> ${res.message}`;
+                }
+                updateSummary();
+            })
+            .catch(err => {
+                console.error('Promo error:', err);
+            });
+    }
+
+    function calculateCurrentSubtotal() {
+        const opt = serviceSelect.options[serviceSelect.selectedIndex];
+        let subtotal = 0;
+        if (opt && opt.value) {
+            const parts = opt.text.split(' - ₱');
+            subtotal = parts[1] ? parseFloat(parts[1].replace(/,/g, '')) : 0;
+        }
+        document.querySelectorAll('.addon-card.selected').forEach(card => {
+            subtotal += parseFloat(card.dataset.price) || 0;
+        });
+        return subtotal;
+    }
+
+    function updateSummary() {
+        const opt = serviceSelect.options[serviceSelect.selectedIndex];
+        let svcPrice = 0;
+        let svcName = '—';
+
+        if (opt && opt.value) {
+            const parts = opt.text.split(' - ₱');
+            svcName = parts[0];
+            svcPrice = parts[1] ? parseFloat(parts[1].replace(/,/g, '')) : 0;
+        }
+
+        const selectedCards = document.querySelectorAll('.addon-card.selected');
+        let addonsTotal = 0;
+        const addonNames = [];
+
+        selectedCards.forEach(c => {
+            addonsTotal += parseFloat(c.dataset.price) || 0;
+            addonNames.push(`${c.dataset.name} (+₱${parseFloat(c.dataset.price).toFixed(2)})`);
+        });
+
+        const subtotal = svcPrice + addonsTotal;
+        const discountLine = document.getElementById('discountLine');
+        const summaryAddonsList = document.getElementById('summaryAddonsList');
+
+        document.getElementById('summaryService').textContent = svcName;
+        document.getElementById('summaryServicePrice').textContent = `₱${svcPrice.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+        
+        const countBadge = document.getElementById('summaryAddonsCount');
+        if (selectedCards.length > 0) {
+            countBadge.textContent = `${selectedCards.length} selected (+₱${addonsTotal.toLocaleString('en-PH', {minimumFractionDigits: 2})})`;
+            countBadge.className = 'badge badge-success';
+            summaryAddonsList.style.display = 'block';
+            summaryAddonsList.innerHTML = addonNames.map(n => `• ${n}`).join('<br>');
+        } else {
+            countBadge.textContent = 'None';
+            countBadge.className = 'badge badge-muted';
+            summaryAddonsList.style.display = 'none';
+        }
+
+        document.getElementById('summarySubtotal').textContent = `₱${subtotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+
+        if (currentDiscount > 0) {
+            discountLine.style.display = 'flex';
+            document.getElementById('summaryDiscount').textContent = `-₱${currentDiscount.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+        } else {
+            discountLine.style.display = 'none';
+        }
+
+        const finalTotal = Math.max(0, subtotal - currentDiscount);
+        document.getElementById('summaryTotal').textContent = `₱${finalTotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+    }
+
+    // Trigger initial service load if preselected
+    if (serviceSelect.value) {
+        serviceSelect.dispatchEvent(new Event('change'));
+    } else {
+        updateSummary();
+    }
+    if (promoInput && promoInput.value.trim()) {
+        setTimeout(function() {
+            btnApplyPromo.click();
+        }, 350);
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

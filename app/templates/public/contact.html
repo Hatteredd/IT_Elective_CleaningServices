@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Us — CleanHome PH{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 40px; padding-bottom: 60px;">
+    <div class="page-header-block" style="padding-top: 24px; padding-bottom: 32px;">
+        <span class="section-eyebrow">Customer Care &amp; Inquiries</span>
+        <h1 style="font-size: 2.5rem; letter-spacing: -0.5px;">We're Here to Help</h1>
+        <p>Have a question about your booking, need a commercial office quote, or want to partner with us? Reach out anytime.</p>
+    </div>
+
+    <div class="contact-layout">
+        <!-- Contact Information Panel -->
+        <div class="contact-info-card" style="border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+            <h2>Get in Touch</h2>
+            <p style="margin-bottom: 24px; color: var(--text-muted); font-size: 0.92rem;">
+                Connect with our local customer experience team through any channel:
+            </p>
+
+            <div class="contact-detail">
+                <div class="icon">📧</div>
+                <div>
+                    <div class="info-label">Customer Support Email</div>
+                    <div class="info-value">
+                        <a href="mailto:support@cleanhome.ph" style="color: var(--text-dark); font-weight: 600;">support@cleanhome.ph</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-detail">
+                <div class="icon">📞</div>
+                <div>
+                    <div class="info-label">Hotline &amp; Viber</div>
+                    <div class="info-value">
+                        <a href="tel:+63281234567" style="color: var(--text-dark); font-weight: 600;">(02) 8123 4567</a> / 0917 123 4567
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-detail">
+                <div class="icon">📍</div>
+                <div>
+                    <div class="info-label">Covered Locations</div>
+                    <div class="info-value">All 16 cities in Metro Manila, Rizal, Cavite, and Laguna</div>
+                </div>
+            </div>
+
+            <div class="contact-detail">
+                <div class="icon">🕐</div>
+                <div>
+                    <div class="info-label">Operating Hours</div>
+                    <div class="info-value">
+                        Monday – Saturday: 7:00 AM – 7:00 PM<br>
+                        Sunday: 8:00 AM – 5:00 PM
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response time badge -->
+            <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 24px; display: flex; align-items: center; gap: 12px;">
+                <div style="font-size: 1.5rem;">⚡</div>
+                <div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-dark);">Fast Response SLA</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Typical response time is under 15 minutes during operating hours.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Form -->
+        <div class="form-card" style="border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 36px;">
+            <h2 style="margin-bottom: 8px;">Send a Direct Message</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+                Fill out the form below and an account specialist will reply via email and SMS.
+            </p>
+
+            <!-- Quick Topic Selectors -->
+            <div style="margin-bottom: 20px;">
+                <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; display: block;">Select an inquiry topic:</label>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button type="button" class="category-chip" style="font-size: 0.78rem; padding: 5px 12px;" onclick="setSubject('Booking & Scheduling Inquiry')">📅 Booking Inquiry</button>
+                    <button type="button" class="category-chip" style="font-size: 0.78rem; padding: 5px 12px;" onclick="setSubject('Commercial / Office Cleaning Quote')">🏢 Office / Commercial</button>
+                    <button type="button" class="category-chip" style="font-size: 0.78rem; padding: 5px 12px;" onclick="setSubject('Payment or Receipt Assistance')">💳 Billing / Payment</button>
+                    <button type="button" class="category-chip" style="font-size: 0.78rem; padding: 5px 12px;" onclick="setSubject('Cleaner Feedback or Rescheduling')">💬 Feedback / Request</button>
+                </div>
+            </div>
+
+            <form method="POST" novalidate id="contactForm">
+                {{ form.hidden_tag() }}
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.name.label }}
+                        {{ form.name(class="form-control", placeholder="Juan Dela Cruz") }}
+                        {% if form.name.errors %}
+                            <div class="error-message">⚠ {{ form.name.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.phone.label }}
+                        {{ form.phone(class="form-control", placeholder="0917 123 4567") }}
+                        {% if form.phone.errors %}
+                            <div class="error-message">⚠ {{ form.phone.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    {{ form.email.label }}
+                    {{ form.email(class="form-control", placeholder="juan@example.com") }}
+                    {% if form.email.errors %}
+                        <div class="error-message">⚠ {{ form.email.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.subject.label }}
+                    {{ form.subject(class="form-control", placeholder="e.g. Question about deep cleaning package", id="subjectInput") }}
+                    {% if form.subject.errors %}
+                        <div class="error-message">⚠ {{ form.subject.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.message.label }}
+                    {{ form.message(class="form-control", rows=4, placeholder="Please describe your house size, unit type, or specific cleaning questions...") }}
+                    {% if form.message.errors %}
+                        <div class="error-message">⚠ {{ form.message.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-block" style="font-size: 1rem;">
+                    Send Message →
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setSubject(subjectText) {
+    const input = document.getElementById('subjectInput');
+    if (input) {
+        input.value = subjectText;
+        input.focus();
+    }
+}
+</script>
+{% endblock %}

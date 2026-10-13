@@ -1,0 +1,96 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} — CleanHome PH Admin{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>{{ title }}</h1>
+        <p class="page-subtitle">Manage staff member details and availability.</p>
+    </div>
+    <a href="{{ url_for('admin.cleaners') }}" class="btn btn-secondary btn-sm">← Back to Staff</a>
+</div>
+
+<div class="dashboard-card" style="max-width:640px;margin-bottom:28px;">
+    <div class="dashboard-card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            {% if form.email %}
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(class="form-control") }}
+                {% for error in form.email.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    {{ form.password.label }}
+                    {{ form.password(class="form-control") }}
+                    {% for error in form.password.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.confirm_password.label }}
+                    {{ form.confirm_password(class="form-control") }}
+                    {% for error in form.confirm_password.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    {{ form.first_name.label }}
+                    {{ form.first_name(class="form-control") }}
+                    {% for error in form.first_name.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.last_name.label }}
+                    {{ form.last_name(class="form-control") }}
+                    {% for error in form.last_name.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                {{ form.phone.label }}
+                {{ form.phone(class="form-control") }}
+                {% for error in form.phone.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+            </div>
+            {% if form.is_available %}
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                    {{ form.is_available(class="form-check") }}
+                    <span>{{ form.is_available.label.text }}</span>
+                </label>
+            </div>
+            {% endif %}
+            <div style="display:flex;gap:10px;">
+                <button type="submit" class="btn btn-primary">Save Staff</button>
+                <a href="{{ url_for('admin.cleaners') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if assigned is defined %}
+<div class="dashboard-card">
+    <div class="dashboard-card-header"><h3>📋 Assigned Bookings</h3></div>
+    <div class="table-wrapper" style="box-shadow:none;border:none;border-radius:0;">
+        <table>
+            <thead>
+                <tr><th>ID</th><th>Date</th><th>Customer</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for b in assigned %}
+                <tr>
+                    <td>#{{ b.id }}</td>
+                    <td>{{ b.scheduled_date.strftime('%b %d, %Y') }} {{ b.scheduled_time.strftime('%I:%M %p') }}</td>
+                    <td>{{ b.customer.first_name }} {{ b.customer.last_name }}</td>
+                    <td><span class="badge status-{{ b.status }}">{{ b.status|replace('_',' ')|title }}</span></td>
+                    <td><a href="{{ url_for('admin.booking_detail', booking_id=b.id) }}" class="btn btn-secondary btn-sm">View</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted">No assigned bookings.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

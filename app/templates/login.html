@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Log In — CleanHome PH{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="logo-mark">🧹</div>
+            <h1>Welcome Back</h1>
+            <p>Log in to manage your bookings and services</p>
+        </div>
+
+        <!-- 1-Click Demo Accounts Selector -->
+        <div class="demo-accounts-box">
+            <div class="demo-accounts-header">
+                <span>⚡ Quick Test Login</span>
+                <span style="font-size: 0.72rem; color: var(--primary); font-weight: 700;">1-Click Fill</span>
+            </div>
+            <div class="demo-pills-wrap">
+                <button type="button" class="demo-pill" onclick="fillCredentials('admin@cleanhome.ph', 'Admin123!')">
+                    <span>🛡️ Admin (Full Access)</span>
+                </button>
+                <button type="button" class="demo-pill" onclick="fillCredentials('customer@cleanhome.ph', 'Customer123!')">
+                    <span>🏠 Customer Account</span>
+                </button>
+            </div>
+        </div>
+
+        <form method="POST" novalidate id="loginForm">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(class="form-control", placeholder="your@email.com", autocomplete="email", id="emailInput") }}
+                {% if form.email.errors %}
+                    <div class="error-message">⚠ {{ form.email.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label }}
+                <div class="password-input-wrap">
+                    {{ form.password(class="form-control", placeholder="Your password", autocomplete="current-password", id="passwordInput") }}
+                    <button type="button" class="password-toggle-btn" aria-label="Show password" title="Show password" tabindex="-1">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+                {% if form.password.errors %}
+                    <div class="error-message">⚠ {{ form.password.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div style="text-align:right; margin-bottom:20px;">
+                <a href="{{ url_for('auth.forgot_password') }}" style="font-size:0.85rem;color:var(--primary);">Forgot your password?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-lg">Log In →</button>
+        </form>
+
+        <div class="auth-divider">— or —</div>
+        <div class="auth-footer">
+            Don't have an account?
+            <a href="{{ url_for('auth.register') }}">Create one free</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillCredentials(email, password) {
+    const emailField = document.getElementById('emailInput') || document.querySelector('input[name="email"]');
+    const passField = document.getElementById('passwordInput') || document.querySelector('input[name="password"]');
+    if (emailField && passField) {
+        emailField.value = email;
+        passField.value = password;
+        emailField.focus();
+        emailField.style.borderColor = 'var(--primary)';
+        passField.style.borderColor = 'var(--primary)';
+        setTimeout(() => {
+            emailField.style.borderColor = '';
+            passField.style.borderColor = '';
+        }, 1000);
+    }
+}
+</script>
+{% endblock %}

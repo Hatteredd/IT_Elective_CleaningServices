@@ -1,0 +1,262 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard — CleanHome PH Admin{% endblock %}
+{% block page_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>Dashboard Overview</h1>
+        <p class="page-subtitle">Welcome back — here's how your cleaning business is performing.</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="{{ url_for('admin.bookings') }}" class="btn btn-secondary btn-sm">📋 All Bookings</a>
+        <a href="{{ url_for('admin.sales') }}" class="btn btn-primary btn-sm">💰 View Sales</a>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid">
+    <div class="stat-card success">
+        <div class="stat-top">
+            <div class="stat-icon">💰</div>
+            <span class="stat-trend up">Revenue</span>
+        </div>
+        <div class="stat-value">₱{{ '{:,.0f}'.format(total_revenue) }}</div>
+        <div class="stat-label">Total Sales &amp; Revenue</div>
+    </div>
+    <div class="stat-card primary">
+        <div class="stat-top">
+            <div class="stat-icon">📋</div>
+            <span class="stat-trend up">All time</span>
+        </div>
+        <div class="stat-value">{{ total_bookings }}</div>
+        <div class="stat-label">Total Bookings</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-top">
+            <div class="stat-icon">⏳</div>
+            <span class="stat-trend down">Action</span>
+        </div>
+        <div class="stat-value">{{ pending_bookings }}</div>
+        <div class="stat-label">Pending Bookings</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-top">
+            <div class="stat-icon">✅</div>
+            <span class="stat-trend up">Done</span>
+        </div>
+        <div class="stat-value">{{ completed_services }}</div>
+        <div class="stat-label">Completed Services</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-top">
+            <div class="stat-icon">👥</div>
+            <span class="stat-trend up">Active</span>
+        </div>
+        <div class="stat-value">{{ total_customers }}</div>
+        <div class="stat-label">Registered Customers</div>
+    </div>
+    <div class="stat-card gold">
+        <div class="stat-top">
+            <div class="stat-icon">🧹</div>
+            <span class="stat-trend up">Live</span>
+        </div>
+        <div class="stat-value">{{ active_services }}</div>
+        <div class="stat-label">Available Services</div>
+    </div>
+</div>
+
+<!-- Chart + Status Distribution -->
+<div class="dashboard-grid">
+    <div class="dashboard-card">
+        <div class="dashboard-card-header">
+            <h3>💰 Sales &amp; Revenue Trend</h3>
+            <div style="display:flex;gap:6px;">
+                <a href="{{ url_for('admin.dashboard', period='daily') }}" class="btn btn-sm {% if chart_period == 'daily' %}btn-primary{% else %}btn-secondary{% endif %}">Daily</a>
+                <a href="{{ url_for('admin.dashboard', period='weekly') }}" class="btn btn-sm {% if chart_period == 'weekly' %}btn-primary{% else %}btn-secondary{% endif %}">Weekly</a>
+                <a href="{{ url_for('admin.dashboard', period='monthly') }}" class="btn btn-sm {% if chart_period == 'monthly' %}btn-primary{% else %}btn-secondary{% endif %}">Monthly</a>
+            </div>
+        </div>
+        <div class="dashboard-card-body">
+            <div class="chart-container">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="dashboard-card-header">
+            <h3>📊 Booking Status Distribution</h3>
+        </div>
+        <div class="dashboard-card-body">
+            {% set total = status_counts.values()|sum if status_counts.values()|sum > 0 else 1 %}
+            {% set status_colors = {'pending':'#F59E0B','confirmed':'#3B82F6','in_progress':'#8B5CF6','completed':'#10B981','cancelled':'#EF4444'} %}
+            {% for status, count in status_counts.items() %}
+            <div class="status-dist-item">
+                <span class="status-dist-dot" style="background:{{ status_colors.get(status, '#94A3B8') }};"></span>
+                <span class="status-dist-label">{{ status|replace('_',' ')|title }}</span>
+                <span class="status-dist-count">{{ count }}</span>
+            </div>
+            <div class="status-dist-bar">
+                <div class="status-dist-bar-fill" style="width:{{ (count / total * 100)|round }}%; background:{{ status_colors.get(status, '#94A3B8') }};"></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Bookings + Upcoming Appointments -->
+<div class="dashboard-grid">
+    <div class="dashboard-card">
+        <div class="dashboard-card-header">
+            <h3>📋 Recent Bookings</h3>
+            <a href="{{ url_for('admin.bookings') }}" class="btn btn-ghost btn-sm">View All →</a>
+        </div>
+        <div class="table-wrapper" style="box-shadow:none;border:none;border-radius:0;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in recent_bookings %}
+                    <tr>
+                        <td><strong>#{{ booking.id }}</strong></td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.78rem;flex-shrink:0;">
+                                    {{ booking.customer.first_name[0] if booking.customer.first_name else 'C' }}{{ booking.customer.last_name[0] if booking.customer.last_name else '' }}
+                                </div>
+                                <div>
+                                    <div style="font-weight:600;font-size:0.88rem;">{{ booking.customer.first_name }} {{ booking.customer.last_name }}</div>
+                                    <div style="font-size:0.74rem;color:var(--text-muted);">{{ booking.customer.phone or '' }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ booking.scheduled_date.strftime('%b %d, %Y') }}</td>
+                        <td><strong>₱{{ '{:,.2f}'.format(booking.total_amount) }}</strong></td>
+                        <td><span class="badge status-{{ booking.status }}">{{ booking.status|replace('_',' ')|title }}</span></td>
+                        <td><a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}" class="btn btn-secondary btn-sm">View</a></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted">No bookings yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="dashboard-card-header">
+            <h3>📅 Upcoming Appointments</h3>
+        </div>
+        <div class="dashboard-card-body">
+            {% if upcoming %}
+                {% for b in upcoming %}
+                <div class="appointment-item">
+                    <div class="appointment-date">
+                        <span class="day">{{ b.scheduled_date.strftime('%d') }}</span>
+                        <span class="month">{{ b.scheduled_date.strftime('%b') }}</span>
+                    </div>
+                    <div class="appointment-info">
+                        <div class="service-name">
+                            {% for item in b.items if item.service_name %}{{ item.service_name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                        </div>
+                        <div class="meta">{{ b.customer.first_name }} {{ b.customer.last_name }} • {{ b.scheduled_time.strftime('%I:%M %p') }}</div>
+                    </div>
+                    <a href="{{ url_for('admin.booking_detail', booking_id=b.id) }}" class="btn btn-ghost btn-sm">View</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted" style="text-align:center;padding:20px 0;">No upcoming appointments.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="dashboard-card">
+    <div class="dashboard-card-header">
+        <h3>🔍 Recent Admin Activity</h3>
+        <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-ghost btn-sm">View All →</a>
+    </div>
+    <div class="dashboard-card-body">
+        {% if recent_activity %}
+            {% for log in recent_activity %}
+            <div class="activity-item">
+                <span class="activity-dot"></span>
+                <div class="activity-content">
+                    <div class="activity-text">
+                        <strong>{{ log.user.email.split('@')[0]|title if log.user else 'System' }}</strong>
+                        {{ log.action|replace('_',' ') }}
+                        <strong>{{ log.entity_type }}</strong>
+                        {% if log.entity_id %}#{{ log.entity_id }}{% endif %}
+                    </div>
+                    <div class="activity-time">{{ log.created_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted" style="text-align:center;padding:20px 0;">No recent activity.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+    var labels = {{ chart_labels|safe }};
+    var data = {{ chart_data|safe }};
+    var ctx = document.getElementById('revenueChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Revenue (₱)',
+                    data: data,
+                    borderColor: '#0EA5A0',
+                    backgroundColor: 'rgba(14,165,160,0.12)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#0EA5A0',
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c){ return '₱' + c.parsed.y.toLocaleString(); }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(v){ return '₱' + v.toLocaleString(); }
+                        }
+                    }
+                }
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

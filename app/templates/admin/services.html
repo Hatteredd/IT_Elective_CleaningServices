@@ -1,0 +1,121 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Services Management — CleanHome PH Admin{% endblock %}
+{% block page_title %}Services Management{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>Services Management</h1>
+        <p class="page-subtitle">Manage cleaning service packages, pricing, and availability.</p>
+    </div>
+    <a href="{{ url_for('admin.add_service') }}" class="btn btn-primary btn-sm">＋ Add New Service</a>
+</div>
+
+<!-- Search -->
+<div class="filters-bar">
+    <form method="get" action="{{ url_for('admin.services') }}" style="display:flex;gap:12px;align-items:flex-end;width:100%;">
+        <div class="filter-group" style="flex:1;max-width:340px;">
+            <label for="search">Search Services</label>
+            <input type="text" id="search" name="search" value="{{ search }}" placeholder="Search by service name…">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">🔍 Search</button>
+        {% if search %}<a href="{{ url_for('admin.services') }}" class="btn btn-secondary btn-sm">Clear</a>{% endif %}
+    </form>
+</div>
+
+<!-- Active Services -->
+<div class="table-wrapper" style="margin-bottom:32px;">
+    <div style="padding:16px 22px;border-bottom:1px solid var(--border);">
+        <h3 style="font-size:1rem;font-weight:700;">Active Services ({{ services|length }})</h3>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Service Name</th>
+                <th>Price</th>
+                <th>Duration</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for service in services %}
+            <tr>
+                <td>#{{ service.id }}</td>
+                <td>
+                    <strong>{{ service.name }}</strong>
+                    {% if service.description %}<br><small style="color:var(--text-muted);">{{ service.description[:80] }}{% if service.description|length > 80 %}…{% endif %}</small>{% endif %}
+                </td>
+                <td>
+                    {% if service.discounted_price and service.discounted_price < service.base_price %}
+                        <span style="color:var(--danger);text-decoration:line-through;font-size:0.8rem;">₱{{ '{:,.2f}'.format(service.base_price) }}</span><br>
+                        <strong style="color:var(--success);">₱{{ '{:,.2f}'.format(service.discounted_price) }}</strong>
+                    {% else %}
+                        <strong>₱{{ '{:,.2f}'.format(service.base_price) }}</strong>
+                    {% endif %}
+                </td>
+                <td>{{ service.duration_minutes }} min</td>
+                <td>
+                    {% if service.is_active %}
+                        <span class="badge badge-success">Active</span>
+                    {% else %}
+                        <span class="badge badge-muted">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('admin.service_add_ons', service_id=service.id) }}" class="btn btn-secondary btn-sm">Add-ons</a>
+                        <a href="{{ url_for('admin.edit_service', service_id=service.id) }}" class="btn btn-outline btn-sm">Edit</a>
+                        <form method="post" action="{{ url_for('admin.archive_service', service_id=service.id) }}" data-confirm="Archive this service? It will be hidden from new bookings." style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Archive</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted" style="padding:40px;">No active services found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Archived Services -->
+{% if archived %}
+<div class="table-wrapper">
+    <div style="padding:16px 22px;border-bottom:1px solid var(--border);">
+        <h3 style="font-size:1rem;font-weight:700;">📦 Archived Services ({{ archived|length }})</h3>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Service Name</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for service in archived %}
+            <tr>
+                <td>#{{ service.id }}</td>
+                <td>{{ service.name }}</td>
+                <td>₱{{ '{:,.2f}'.format(service.base_price) }}</td>
+                <td>
+                    <div class="table-actions">
+                        <form method="post" action="{{ url_for('admin.restore_service', service_id=service.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-outline btn-sm">↩ Restore</button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.delete_service', service_id=service.id) }}" data-confirm="Permanently delete this service? This cannot be undone." style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">🗑 Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

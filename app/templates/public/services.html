@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Our Cleaning Services & Packages — CleanHome PH{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 24px;">
+    <div class="page-header-block" style="padding-top: 36px; padding-bottom: 28px;">
+        <span class="section-eyebrow">Professional Home Services</span>
+        <h1 style="font-size: 2.5rem; letter-spacing: -0.5px;">Find Your Perfect Cleaning Package</h1>
+        <p>From routine apartment maintenance to comprehensive deep cleans — tailored for Filipino homes.</p>
+    </div>
+
+    <!-- Search & Category Filter Toolbar -->
+    <div class="services-toolbar">
+        <div class="category-chips-wrap" id="categoryChips">
+            <button type="button" class="category-chip active" data-category="all">
+                <span>🌟 All Packages</span>
+            </button>
+            <button type="button" class="category-chip" data-category="general">
+                <span>🏠 General Cleaning</span>
+            </button>
+            <button type="button" class="category-chip" data-category="deep">
+                <span>✨ Deep Clean</span>
+            </button>
+            <button type="button" class="category-chip" data-category="move">
+                <span>📦 Move In / Out</span>
+            </button>
+            <button type="button" class="category-chip" data-category="special">
+                <span>🛋️ Specialized</span>
+            </button>
+        </div>
+
+        <input type="text" id="serviceSearch" class="services-search-input" placeholder="Search cleaning packages..." autocomplete="off">
+    </div>
+
+    <!-- Services Grid -->
+    <div class="services-grid" id="servicesContainer" style="margin-bottom: 60px;">
+        {% set icons = ['🧹', '✨', '🏠', '📦', '🍳', '🛋️', '🚿'] %}
+        {% for service in services %}
+            {# Auto-categorize based on service name for quick filtering #}
+            {% set s_name = service.name|lower %}
+            {% if 'deep' in s_name %}
+                {% set cat = 'deep' %}
+                {% set badge_text = 'Heavy Duty' %}
+            {% elif 'move' in s_name or 'turnover' in s_name %}
+                {% set cat = 'move' %}
+                {% set badge_text = 'Turnover Ready' %}
+            {% elif 'sofa' in s_name or 'mattress' in s_name or 'upholstery' in s_name or 'sanitiz' in s_name or 'post' in s_name %}
+                {% set cat = 'special' %}
+                {% set badge_text = 'Specialized' %}
+            {% else %}
+                {% set cat = 'general' %}
+                {% set badge_text = 'Top Choice' %}
+            {% endif %}
+
+            <div class="service-card" data-category="{{ cat }}" data-name="{{ service.name|lower }}" data-desc="{{ service.description|lower }}">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="service-icon">{{ icons[loop.index0 % icons|length] }}</div>
+                    <span class="badge badge-primary" style="font-size: 0.72rem;">{{ badge_text }}</span>
+                </div>
+
+                <div>
+                    <h3 style="font-size: 1.25rem; margin-bottom: 4px;">{{ service.name }}</h3>
+                    <span class="service-duration">⏱ {{ service.duration_minutes }} minutes estimated</span>
+                </div>
+
+                <div class="service-price">
+                    {% if service.discounted_price and service.discounted_price < service.base_price %}
+                        <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                            <span style="text-decoration: line-through; color: var(--text-light); font-size: 1rem; font-weight: 500;">₱{{ '{:,.0f}'.format(service.base_price) }}</span>
+                            <span>₱{{ '{:,.0f}'.format(service.discounted_price) }}</span>
+                            <span class="discount-pill">
+                                -{{ (((service.base_price - service.discounted_price) / service.base_price) * 100)|round|int }}% OFF
+                            </span>
+                        </div>
+                    {% else %}
+                        <span>₱{{ '{:,.0f}'.format(service.base_price) }}</span>
+                    {% endif %}
+                </div>
+
+                <p class="service-desc">{{ service.description }}</p>
+
+                <!-- Value inclusions checklist -->
+                <div class="service-features-list">
+                    <div class="service-feature-item">
+                        <span class="chk">✓</span>
+                        <span>Professional vetted cleaner</span>
+                    </div>
+                    <div class="service-feature-item">
+                        <span class="chk">✓</span>
+                        <span>Eco-friendly, child &amp; pet safe solutions</span>
+                    </div>
+                    <div class="service-feature-item">
+                        <span class="chk">✓</span>
+                        <span>100% Satisfaction or free re-clean</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border);">
+                    <a href="{{ url_for('public.service_detail', service_id=service.id) }}" class="btn btn-outline btn-sm" style="flex: 1; text-align: center;">Details &amp; Add-ons</a>
+                    {% if current_user.is_authenticated and current_user.role == 'customer' %}
+                        <a href="{{ url_for('customer.book', service_id=service.id) }}" class="btn btn-primary btn-sm" style="flex: 1; text-align: center;">Book Now →</a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login', next=url_for('customer.book', service_id=service.id)) }}" class="btn btn-primary btn-sm" style="flex: 1; text-align: center;">Book Now →</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-state" style="grid-column: 1/-1;">
+                <div class="empty-icon">🧹</div>
+                <h3>No services available yet</h3>
+                <p>Check back soon — our cleaning packages are being set up.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Empty search state placeholder -->
+    <div id="noMatchState" class="empty-state" style="display: none; margin-bottom: 60px;">
+        <div class="empty-icon">🔍</div>
+        <h3>No packages match your search</h3>
+        <p>Try searching for different keywords like "condo", "deep", or "general".</p>
+        <button type="button" class="btn btn-outline btn-sm" id="resetFiltersBtn" style="margin-top: 12px;">Clear Filters</button>
+    </div>
+
+    <!-- Customized / Commercial Cleaning Teaser -->
+    <div style="background: linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%); border: 1.5px solid var(--primary); border-radius: var(--radius-xl); padding: 40px; margin-bottom: 60px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center;">
+        <div>
+            <span class="badge badge-primary" style="margin-bottom: 8px;">Custom Solutions</span>
+            <h2 style="font-size: 1.6rem; margin-bottom: 8px; color: var(--text-dark);">Need an Office, Commercial, or Custom Clean? 🏢</h2>
+            <p style="color: var(--text-body); max-width: 620px; font-size: 0.95rem;">
+                Have a large commercial unit, corporate office space, or special post-renovation cleanup? We provide on-site inspection and customized recurring quotes.
+            </p>
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="{{ url_for('public.contact') }}" class="btn btn-primary btn-lg">Request Custom Quote</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chips = document.querySelectorAll('.category-chip');
+    const searchInput = document.getElementById('serviceSearch');
+    const cards = document.querySelectorAll('#servicesContainer .service-card');
+    const noMatch = document.getElementById('noMatchState');
+    const resetBtn = document.getElementById('resetFiltersBtn');
+
+    let activeCategory = 'all';
+    let searchQuery = '';
+
+    function filterCards() {
+        let visibleCount = 0;
+        cards.forEach(card => {
+            const cardCat = card.dataset.category;
+            const cardName = card.dataset.name || '';
+            const cardDesc = card.dataset.desc || '';
+
+            const matchesCategory = (activeCategory === 'all') || (cardCat === activeCategory);
+            const matchesSearch = !searchQuery || cardName.includes(searchQuery) || cardDesc.includes(searchQuery);
+
+            if (matchesCategory && matchesSearch) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (cards.length > 0) {
+            noMatch.style.display = (visibleCount === 0) ? 'block' : 'none';
+        }
+    }
+
+    chips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            chips.forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            activeCategory = this.dataset.category;
+            filterCards();
+        });
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            searchQuery = this.value.trim().toLowerCase();
+            filterCards();
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            activeCategory = 'all';
+            searchQuery = '';
+            chips.forEach(c => c.classList.remove('active'));
+            if (chips[0]) chips[0].classList.add('active');
+            if (searchInput) searchInput.value = '';
+            filterCards();
+        });
+    }
+});
+</script>
+{% endblock %}

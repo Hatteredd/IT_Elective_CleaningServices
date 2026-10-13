@@ -1,0 +1,76 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Customer Inquiries — CleanHome PH Admin{% endblock %}
+{% block page_title %}Customer Inquiries{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>Customer Inquiries</h1>
+        <p class="page-subtitle">Messages submitted through the public Contact form.</p>
+    </div>
+</div>
+
+{% if inquiries %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Customer Name</th>
+                <th>Contact Info</th>
+                <th>Subject & Message</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inq in inquiries %}
+            <tr>
+                <td style="white-space:nowrap;font-size:0.82rem;color:var(--text-muted);">
+                    {{ inq.created_at.strftime('%b %d, %Y') }}<br>
+                    {{ inq.created_at.strftime('%I:%M %p') }}
+                </td>
+                <td><strong>{{ inq.name }}</strong></td>
+                <td style="font-size:0.85rem;">
+                    <div>📧 <a href="mailto:{{ inq.email }}">{{ inq.email }}</a></div>
+                    {% if inq.phone %}<div>📞 {{ inq.phone }}</div>{% endif %}
+                </td>
+                <td style="max-width:340px;">
+                    <div style="font-weight:600;margin-bottom:4px;">{{ inq.subject }}</div>
+                    <div style="font-size:0.83rem;color:var(--text-body);line-height:1.5;">{{ inq.message }}</div>
+                </td>
+                <td>
+                    {% if inq.status == 'new' %}
+                        <span class="badge badge-warning">New</span>
+                    {% elif inq.status == 'in_progress' %}
+                        <span class="badge badge-info">In Progress</span>
+                    {% else %}
+                        <span class="badge badge-success">Resolved</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('admin.update_inquiry_status', inquiry_id=inq.id) }}" style="display:flex;gap:6px;align-items:center;">
+                        <select name="status" class="form-control" style="padding:6px 10px;font-size:0.8rem;width:auto;">
+                            <option value="new" {% if inq.status == 'new' %}selected{% endif %}>New</option>
+                            <option value="in_progress" {% if inq.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="resolved" {% if inq.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                        <button type="submit" class="btn btn-secondary btn-sm">Update</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="dashboard-card">
+    <div class="dashboard-card-body text-center" style="padding:60px 20px;">
+        <div style="font-size:3rem;margin-bottom:12px;">📭</div>
+        <h3 style="margin-bottom:8px;">No Customer Inquiries Yet</h3>
+        <p class="text-muted">Messages submitted through the public Contact form will appear here.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

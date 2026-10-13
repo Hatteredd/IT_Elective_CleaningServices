@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Leave a Review - CleanHome PH{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Leave a Review</h1>
+        <a href="{{ url_for('customer.booking_detail', booking_id=booking.id) }}" class="btn btn-secondary">Back to Booking</a>
+    </div>
+    
+    <div class="review-form-container">
+        <div class="booking-summary">
+            <h3>Booking #{{ booking.id }}</h3>
+            <p>{{ booking.scheduled_date.strftime('%B %d, %Y') }} at {{ booking.scheduled_time.strftime('%I:%M %p') }}</p>
+        </div>
+        
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.rating.label }}
+                {{ form.rating(class="form-control") }}
+                {% if form.rating.errors %}
+                    <div class="error-message">
+                        {% for error in form.rating.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.comment.label }}
+                {{ form.comment(class="form-control", rows=5, placeholder="Share your experience with this service") }}
+                {% if form.comment.errors %}
+                    <div class="error-message">
+                        {% for error in form.comment.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Review</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.review-form-container {
+    max-width: 600px;
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.booking-summary {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.booking-summary h3 {
+    color: #2c3e50;
+    margin: 0 0 0.5rem 0;
+}
+
+.booking-summary p {
+    color: #666;
+    margin: 0;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+</style>
+{% endblock %}

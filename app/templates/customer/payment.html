@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Complete Payment — CleanHome PH{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:36px; padding-bottom:60px;">
+    <div class="page-header" style="margin-bottom:24px;">
+        <div>
+            <span class="section-eyebrow">Safe &amp; Secure Checkout</span>
+            <h1 style="font-size:2rem; margin-top:4px;">Complete Your Payment</h1>
+            <p style="color:var(--text-muted); font-size:0.95rem;">Choose your preferred payment channel for Booking #{{ booking.id }}.</p>
+        </div>
+        <a href="{{ url_for('customer.booking_detail', booking_id=booking.id) }}" class="btn btn-secondary btn-sm">← Back to Booking</a>
+    </div>
+
+    <div class="detail-layout">
+        <!-- Main Payment Area -->
+        <div>
+            <!-- Sandbox Notice Banner -->
+            <div class="sandbox-banner" style="background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:var(--radius);padding:16px 20px;display:flex;gap:14px;align-items:flex-start;margin-bottom:24px;">
+                <div style="font-size:1.4rem;">🧪</div>
+                <div>
+                    <div style="font-weight:700;color:#92400E;font-size:0.92rem;">Simulated Sandbox Environment</div>
+                    <div style="color:#78350F;font-size:0.84rem;margin-top:2px;">
+                        This is a secure mock payment testing workflow. No actual bank or e-wallet account will be charged.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Methods Card -->
+            <div class="card" style="margin-bottom:24px;border-radius:var(--radius-lg);overflow:hidden;">
+                <div class="card-header" style="background:var(--bg-subtle);padding:18px 24px;border-bottom:1px solid var(--border);">
+                    <h3 style="font-size:1rem;margin:0;display:flex;align-items:center;gap:8px;">
+                        <span>💳</span> Select Payment Channel
+                    </h3>
+                </div>
+                <div class="card-body" style="padding:22px 24px;">
+                    <div class="payment-methods-grid" id="paymentMethodsGrid">
+                        <!-- GCash Option -->
+                        <div class="payment-option-card active" data-method="gcash" data-label="GCash">
+                            <div class="payment-option-left">
+                                <span class="payment-badge-pill badge-gcash">GCash</span>
+                                <div>
+                                    <div style="font-weight:700;font-size:0.95rem;color:var(--text-dark);">GCash (Recommended)</div>
+                                    <div style="font-size:0.8rem;color:var(--text-muted);">Instant mobile e-wallet payment via PayMongo</div>
+                                </div>
+                            </div>
+                            <div style="font-size:1.2rem;color:var(--primary);">●</div>
+                        </div>
+
+                        <!-- Maya Option -->
+                        <div class="payment-option-card" data-method="maya" data-label="Maya">
+                            <div class="payment-option-left">
+                                <span class="payment-badge-pill badge-maya">Maya</span>
+                                <div>
+                                    <div style="font-weight:700;font-size:0.95rem;color:var(--text-dark);">Maya / QR Ph</div>
+                                    <div style="font-size:0.8rem;color:var(--text-muted);">Scan QR Ph or log in with your Maya account</div>
+                                </div>
+                            </div>
+                            <div style="font-size:1.2rem;color:var(--border);">○</div>
+                        </div>
+
+                        <!-- Credit / Debit Card -->
+                        <div class="payment-option-card" data-method="card" data-label="Card">
+                            <div class="payment-option-left">
+                                <span class="payment-badge-pill badge-card">Cards</span>
+                                <div>
+                                    <div style="font-weight:700;font-size:0.95rem;color:var(--text-dark);">Credit or Debit Card</div>
+                                    <div style="font-size:0.8rem;color:var(--text-muted);">Visa, Mastercard, JCB with 3D Secure verification</div>
+                                </div>
+                            </div>
+                            <div style="font-size:1.2rem;color:var(--border);">○</div>
+                        </div>
+
+                        <!-- Cash on Delivery -->
+                        <div class="payment-option-card" data-method="cash" data-label="Cash on Service">
+                            <div class="payment-option-left">
+                                <span class="payment-badge-pill badge-cash">Cash</span>
+                                <div>
+                                    <div style="font-weight:700;font-size:0.95rem;color:var(--text-dark);">Cash on Service</div>
+                                    <div style="font-size:0.8rem;color:var(--text-muted);">Pay directly to the cleaner upon inspection</div>
+                                </div>
+                            </div>
+                            <div style="font-size:1.2rem;color:var(--border);">○</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Form -->
+            <form method="POST" id="paymentForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="payment_method" id="selectedPaymentMethod" value="gcash">
+
+                <button type="submit" id="btnSubmitPayment" class="btn btn-primary btn-xl btn-block" style="font-size:1.1rem;font-weight:700;padding:18px;box-shadow:0 6px 20px var(--primary-glow);">
+                    🔒 Pay ₱{{ '{:,.2f}'.format(booking.total_amount) }} with GCash
+                </button>
+
+                <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:16px;color:var(--text-muted);font-size:0.82rem;">
+                    <span>🛡️ 256-Bit SSL Encrypted</span>
+                    <span>•</span>
+                    <span>🇵🇭 Official PayMongo Gateway</span>
+                    <span>•</span>
+                    <span>⚡ Instant Receipt</span>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sticky Order Summary Sidebar -->
+        <div>
+            <div class="booking-summary-card">
+                <div class="summary-header">
+                    <h3 style="margin:0;font-size:1rem;color:white;">📋 Booking Summary</h3>
+                </div>
+                <div class="summary-body">
+                    <div class="summary-line">
+                        <span class="label">Booking ID</span>
+                        <span class="font-bold">#{{ booking.id }}</span>
+                    </div>
+                    <div class="summary-line">
+                        <span class="label">Main Service</span>
+                        <span style="font-weight:600;text-align:right;">
+                            {% for item in booking.items if item.service_id %}{{ item.service_name }}{% endfor %}
+                        </span>
+                    </div>
+                    <div class="summary-line">
+                        <span class="label">Appointment</span>
+                        <span>{{ booking.scheduled_date.strftime('%b %d, %Y') }} at {{ booking.scheduled_time.strftime('%I:%M %p') }}</span>
+                    </div>
+                    <div class="summary-line">
+                        <span class="label">Address</span>
+                        <span style="text-align:right;font-size:0.82rem;max-width:180px;">
+                            {{ booking.address.street }}, {{ booking.address.city }}
+                        </span>
+                    </div>
+                    <div class="summary-line">
+                        <span class="label">Subtotal</span>
+                        <span>₱{{ '{:,.2f}'.format(booking.subtotal) }}</span>
+                    </div>
+                    {% if booking.discount_amount %}
+                    <div class="summary-line">
+                        <span class="label" style="color:var(--success);">Voucher Discount</span>
+                        <span style="color:var(--success);font-weight:700;">-₱{{ '{:,.2f}'.format(booking.discount_amount) }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="summary-line total">
+                        <span>Total Due</span>
+                        <span class="value">₱{{ '{:,.2f}'.format(booking.total_amount) }}</span>
+                    </div>
+                </div>
+                <div class="summary-footer" style="background:var(--bg-subtle);border-top:1px solid var(--border);padding:16px 20px;text-align:center;">
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin:0;">
+                        Need to reschedule instead? <a href="{{ url_for('customer.reschedule_booking', booking_id=booking.id) }}">Click here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const paymentCards = document.querySelectorAll('.payment-option-card');
+    const selectedInput = document.getElementById('selectedPaymentMethod');
+    const btnSubmit = document.getElementById('btnSubmitPayment');
+    const amountStr = '₱{{ "{:,.2f}".format(booking.total_amount) }}';
+
+    paymentCards.forEach(card => {
+        card.addEventListener('click', function () {
+            paymentCards.forEach(c => {
+                c.classList.remove('active');
+                const indicator = c.querySelector('div:last-child');
+                if (indicator) {
+                    indicator.textContent = '○';
+                    indicator.style.color = 'var(--border)';
+                }
+            });
+
+            this.classList.add('active');
+            const indicator = this.querySelector('div:last-child');
+            if (indicator) {
+                indicator.textContent = '●';
+                indicator.style.color = 'var(--primary)';
+            }
+
+            const method = this.dataset.method;
+            const label = this.dataset.label;
+            selectedInput.value = method;
+
+            if (method === 'cash') {
+                btnSubmit.textContent = `Confirm Booking (${amountStr} Cash on Service) →`;
+            } else {
+                btnSubmit.textContent = `🔒 Pay ${amountStr} with ${label} →`;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

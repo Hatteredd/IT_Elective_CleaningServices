@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin — CleanHome PH{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<div class="admin-app">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="admin-sidebar" id="adminSidebar">
+        <a href="{{ url_for('admin.dashboard') }}" class="admin-sidebar-brand">
+            <span class="brand-icon">🧹</span>
+            <span class="brand-text">CleanHome PH<small>Admin Panel</small></span>
+        </a>
+
+        <nav>
+            <div class="nav-section-label">Overview</div>
+            <a href="{{ url_for('admin.dashboard') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                <span class="nav-icon">📊</span> Dashboard
+            </a>
+
+            <div class="nav-section-label">Management</div>
+            <a href="{{ url_for('admin.bookings') }}" class="nav-link {% if active_page == 'bookings' %}active{% endif %}">
+                <span class="nav-icon">📋</span> Bookings
+            </a>
+            <a href="{{ url_for('admin.services') }}" class="nav-link {% if active_page == 'services' %}active{% endif %}">
+                <span class="nav-icon">🧹</span> Services
+            </a>
+            <a href="{{ url_for('admin.customers') }}" class="nav-link {% if active_page == 'customers' %}active{% endif %}">
+                <span class="nav-icon">👥</span> Customers
+            </a>
+            <a href="{{ url_for('admin.cleaners') }}" class="nav-link {% if active_page == 'cleaners' %}active{% endif %}">
+                <span class="nav-icon">🧑‍🔧</span> Staff
+            </a>
+            <a href="{{ url_for('admin.promotions') }}" class="nav-link {% if active_page == 'promotions' %}active{% endif %}">
+                <span class="nav-icon">🏷️</span> Promotions
+            </a>
+            <a href="{{ url_for('admin.sales') }}" class="nav-link {% if active_page == 'sales' %}active{% endif %}">
+                <span class="nav-icon">💰</span> Sales &amp; Payments
+            </a>
+
+            <div class="nav-section-label">Records</div>
+            <a href="{{ url_for('admin.archived') }}" class="nav-link {% if active_page == 'archived' %}active{% endif %}">
+                <span class="nav-icon">📦</span> Archived
+            </a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="nav-link {% if active_page == 'audit_logs' %}active{% endif %}">
+                <span class="nav-icon">🔍</span> Activity Logs
+            </a>
+            <a href="{{ url_for('admin.inquiries') }}" class="nav-link {% if active_page == 'inquiries' %}active{% endif %}">
+                <span class="nav-icon">📬</span> Inquiries
+            </a>
+
+            <div class="nav-section-label">System</div>
+            <a href="{{ url_for('admin.settings') }}" class="nav-link {% if active_page == 'settings' %}active{% endif %}">
+                <span class="nav-icon">⚙️</span> Settings
+            </a>
+        </nav>
+
+        <div class="admin-sidebar-footer">
+            &copy; 2026 CleanHome PH
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ===== MAIN AREA ===== -->
+    <div class="admin-main">
+
+        <!-- Top bar -->
+        <header class="admin-topbar">
+            <div class="admin-topbar-left">
+                <button class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+                <h1 class="admin-topbar-title">{% block page_title %}Dashboard{% endblock %}</h1>
+            </div>
+
+            <div class="admin-topbar-right">
+                <div class="admin-topbar-search">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" placeholder="Search…" id="topbarSearch">
+                </div>
+
+                <div class="admin-user-menu" id="adminUserMenu">
+                    <div class="admin-avatar">{{ current_user.email[0]|upper if current_user.is_authenticated else 'A' }}</div>
+                    <div class="admin-user-info">
+                        <div class="name">{{ current_user.email.split('@')[0]|title if current_user.is_authenticated else 'Admin' }}</div>
+                        <div class="role">Administrator</div>
+                    </div>
+                    <div class="admin-user-dropdown" id="adminUserDropdown">
+                        <a href="{{ url_for('admin.settings') }}"><span>👤</span> Profile &amp; Settings</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ url_for('public.index') }}"><span>🏠</span> View Website</a>
+                        <a href="{{ url_for('auth.logout') }}"><span>🚪</span> Log Out</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div style="padding: 0 28px; margin-top: 16px;">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}" style="margin-bottom: 10px;">
+                            {% if category == 'success' %}✅{% elif category == 'error' %}❌{% elif category == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Content -->
+        <main class="admin-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+(function(){
+    // Inject CSRF token into all POST forms that don't already have one
+    var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        document.querySelectorAll('form[method="POST"]').forEach(function(form){
+            if (!form.querySelector('input[name="csrf_token"]')) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'csrf_token';
+                input.value = csrfToken;
+                form.appendChild(input);
+            }
+        });
+    }
+
+    // Confirmation dialog for forms with data-confirm attribute
+    document.querySelectorAll('form[data-confirm]').forEach(function(form){
+        form.addEventListener('submit', function(e){
+            var msg = form.getAttribute('data-confirm');
+            if (!confirm(msg)) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    var sidebar = document.getElementById('adminSidebar');
+    var toggle = document.getElementById('sidebarToggle');
+    var overlay = document.getElementById('sidebarOverlay');
+    if (toggle && sidebar) {
+        toggle.addEventListener('click', function(){
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        });
+        if (overlay) {
+            overlay.addEventListener('click', function(){
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            });
+        }
+    }
+    var userMenu = document.getElementById('adminUserMenu');
+    var userDropdown = document.getElementById('adminUserDropdown');
+    if (userMenu && userDropdown) {
+        userMenu.addEventListener('click', function(e){
+            e.stopPropagation();
+            userDropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', function(){
+            userDropdown.classList.remove('show');
+        });
+    }
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

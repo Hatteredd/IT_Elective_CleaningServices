@@ -1,0 +1,117 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Sales & Payments — CleanHome PH Admin{% endblock %}
+{% block page_title %}Sales & Payments{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>Sales &amp; Payments</h1>
+        <p class="page-subtitle">Track revenue, transactions, and payment methods. Only completed transactions count as realized revenue.</p>
+    </div>
+    <button onclick="window.print()" class="btn btn-secondary btn-sm">🖨️ Print Report</button>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid">
+    <div class="stat-card success">
+        <div class="stat-top"><div class="stat-icon">💰</div></div>
+        <div class="stat-value">₱{{ '{:,.2f}'.format(total_revenue) }}</div>
+        <div class="stat-label">Total Revenue (Completed)</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-top"><div class="stat-icon">⏳</div></div>
+        <div class="stat-value">₱{{ '{:,.2f}'.format(pending_payments) }}</div>
+        <div class="stat-label">Pending Payments</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-top"><div class="stat-icon">✅</div></div>
+        <div class="stat-value">{{ completed_count }}</div>
+        <div class="stat-label">Completed Transactions</div>
+    </div>
+    <div class="stat-card primary">
+        <div class="stat-top"><div class="stat-icon">📊</div></div>
+        <div class="stat-value">{{ total_count }}</div>
+        <div class="stat-label">Total Transactions</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+    <form method="get" action="{{ url_for('admin.sales') }}" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;width:100%;">
+        <div class="filter-group">
+            <label for="search">Search</label>
+            <input type="text" id="search" name="search" value="{{ search }}" placeholder="Booking ID or Reference">
+        </div>
+        <div class="filter-group">
+            <label for="payment_status">Payment Status</label>
+            <select id="payment_status" name="payment_status">
+                <option value="">All Statuses</option>
+                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+                <option value="refunded" {% if status_filter == 'refunded' %}selected{% endif %}>Refunded</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="start_date">From Date</label>
+            <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+        </div>
+        <div class="filter-group">
+            <label for="end_date">To Date</label>
+            <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">🔍 Apply</button>
+        <a href="{{ url_for('admin.sales') }}" class="btn btn-secondary btn-sm">Reset</a>
+    </form>
+</div>
+
+<!-- Payment Method Breakdown -->
+{% if method_breakdown %}
+<div class="dashboard-card" style="margin-bottom:28px;">
+    <div class="dashboard-card-header"><h3>💳 Payment Method Breakdown</h3></div>
+    <div class="dashboard-card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+            {% for method, amount in method_breakdown.items() %}
+            <div style="background:var(--bg-subtle);border-radius:var(--radius);padding:16px;text-align:center;">
+                <div class="text-muted" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">{{ method|replace('_',' ')|title }}</div>
+                <div style="font-size:1.3rem;font-weight:800;color:var(--primary);margin-top:4px;">₱{{ '{:,.2f}'.format(amount) }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Transactions Table -->
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Booking</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Paid At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+            <tr>
+                <td>#{{ payment.id }}</td>
+                <td><a href="{{ url_for('admin.booking_detail', booking_id=payment.booking_id) }}">Booking #{{ payment.booking_id }}</a></td>
+                <td>{{ payment.payment_method|replace('_',' ')|title }}</td>
+                <td style="font-size:0.82rem;color:var(--text-muted);">{{ payment.payment_reference or '—' }}</td>
+                <td><strong>₱{{ '{:,.2f}'.format(payment.amount) }}</strong></td>
+                <td><span class="badge status-{{ payment.status }}">{{ payment.status|title }}</span></td>
+                <td style="font-size:0.82rem;">{{ payment.paid_at.strftime('%b %d, %Y %I:%M %p') if payment.paid_at else '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center text-muted" style="padding:40px;">No transactions found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

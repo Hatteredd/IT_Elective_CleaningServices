@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}My Bookings — CleanHome PH{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:36px; padding-bottom:60px;">
+    <div class="page-header" style="margin-bottom:28px;">
+        <div>
+            <span class="section-eyebrow">Service History</span>
+            <h1 style="font-size:2rem;margin-top:4px;">My Bookings</h1>
+            <p style="color:var(--text-muted);font-size:0.95rem;">Track, manage, and review all your cleaning appointments.</p>
+        </div>
+        <a href="{{ url_for('customer.book') }}" class="btn btn-primary" style="font-weight:700;">+ Book New Cleaning</a>
+    </div>
+
+    {% if bookings %}
+    <!-- Filter status pills (client-side interactive) -->
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;" id="bookingFilterChips">
+        <button type="button" class="btn btn-secondary btn-sm filter-chip active" data-filter="all" style="font-weight:700;">
+            All ({{ bookings|length }})
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm filter-chip" data-filter="pending,confirmed,in_progress">
+            Upcoming &amp; Active
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm filter-chip" data-filter="completed">
+            Completed
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm filter-chip" data-filter="cancelled">
+            Cancelled
+        </button>
+    </div>
+
+    <div class="booking-list" id="bookingsList">
+        {% for booking in bookings %}
+        <div class="booking-row booking-item-card" data-status="{{ booking.status }}" style="background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 26px;box-shadow:var(--shadow-sm);transition:var(--transition);">
+            <div class="booking-row-info">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <h3 style="font-size:1.15rem;font-weight:700;color:var(--text-dark);margin:0;">
+                        {% for item in booking.items if item.service_id %}{{ item.service_name }}{% endfor %}
+                    </h3>
+                    <span style="font-size:0.8rem;color:var(--text-muted);font-family:monospace;">#{{ booking.id }}</span>
+                </div>
+
+                <div class="booking-row-meta" style="margin-bottom:10px;">
+                    <span>📅 {{ booking.scheduled_date.strftime('%B %d, %Y') }}</span>
+                    <span>⏰ {{ booking.scheduled_time.strftime('%I:%M %p') }}</span>
+                    {% if booking.address %}
+                    <span>📍 {{ booking.address.city }}</span>
+                    {% endif %}
+                </div>
+
+                {% if booking.cleaner %}
+                <div style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-subtle);padding:4px 10px;border-radius:var(--radius-full);font-size:0.78rem;color:var(--text-body);">
+                    <span>🧑‍🔧</span>
+                    <span>Cleaner: <strong>{{ booking.cleaner.first_name }} {{ booking.cleaner.last_name }}</strong></span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="booking-row-right">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+                    <span class="badge status-{{ booking.status }}" style="font-weight:700;font-size:0.75rem;padding:4px 10px;border-radius:var(--radius-full);">
+                        {{ booking.status|replace('_',' ')|title }}
+                    </span>
+                    <span class="badge status-{{ booking.payment_status }}" style="font-weight:700;font-size:0.75rem;padding:4px 10px;border-radius:var(--radius-full);">
+                        {{ booking.payment_status|title }}
+                    </span>
+                </div>
+
+                <div class="booking-amount" style="font-size:1.3rem;font-weight:800;color:var(--primary);margin:4px 0;">
+                    ₱{{ '{:,.2f}'.format(booking.total_amount) }}
+                </div>
+
+                <div style="display:flex;gap:8px;align-items:center;">
+                    {% if booking.payment_status == 'unpaid' and booking.status != 'cancelled' %}
+                    <a href="{{ url_for('customer.pay_booking', booking_id=booking.id) }}" class="btn btn-primary btn-sm" style="font-weight:700;">
+                        💳 Pay Now
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('customer.booking_detail', booking_id=booking.id) }}" class="btn btn-secondary btn-sm" style="font-weight:600;">
+                        View Details →
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state" style="background:white;border-radius:var(--radius-xl);border:1.5px dashed var(--border);padding:64px 40px;text-align:center;">
+        <div class="empty-icon" style="font-size:3.5rem;margin-bottom:16px;">📋</div>
+        <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:8px;">No bookings found</h3>
+        <p style="color:var(--text-muted);font-size:0.95rem;max-width:440px;margin:0 auto 24px;">
+            You haven't scheduled any cleaning sessions yet. Select a package and enjoy a hassle-free home.
+        </p>
+        <a href="{{ url_for('customer.book') }}" class="btn btn-primary btn-lg" style="font-weight:700;">
+            Book a Service Now
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const chips = document.querySelectorAll('.filter-chip');
+    const items = document.querySelectorAll('.booking-item-card');
+
+    chips.forEach(chip => {
+        chip.addEventListener('click', function () {
+            chips.forEach(c => {
+                c.classList.remove('active', 'btn-secondary');
+                c.classList.add('btn-ghost');
+            });
+            this.classList.add('active', 'btn-secondary');
+            this.classList.remove('btn-ghost');
+
+            const filter = this.dataset.filter;
+            const allowed = filter.split(',');
+
+            items.forEach(item => {
+                const status = item.dataset.status;
+                if (filter === 'all' || allowed.includes(status)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

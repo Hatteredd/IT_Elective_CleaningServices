@@ -1,0 +1,104 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Customers Management — CleanHome PH Admin{% endblock %}
+{% block page_title %}Customers Management{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>Customers Management</h1>
+        <p class="page-subtitle">View customer profiles, booking history, and total spending.</p>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="filters-bar">
+    <form method="get" action="{{ url_for('admin.customers') }}" style="display:flex;gap:12px;align-items:flex-end;width:100%;">
+        <div class="filter-group" style="flex:1;max-width:380px;">
+            <label for="search">Search Customers</label>
+            <input type="text" id="search" name="search" value="{{ search }}" placeholder="Search by name or email…">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">🔍 Search</button>
+        {% if search %}<a href="{{ url_for('admin.customers') }}" class="btn btn-secondary btn-sm">Clear</a>{% endif %}
+    </form>
+</div>
+
+<!-- Customers Table -->
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Bookings</th>
+                <th>Total Spending</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+            <tr>
+                <td>#{{ customer.id }}</td>
+                <td><strong>{{ customer.first_name }} {{ customer.last_name }}</strong></td>
+                <td>{{ customer.user.email }}</td>
+                <td>{{ customer.phone or '—' }}</td>
+                <td>{{ customer.bookings|length }}</td>
+                <td><strong>₱{{ '{:,.2f}'.format(customer_spending.get(customer.id, 0)) }}</strong></td>
+                <td>
+                    {% if customer.user.is_active %}
+                        <span class="badge badge-success">Active</span>
+                    {% else %}
+                        <span class="badge badge-muted">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('admin.customer_detail', customer_id=customer.id) }}" class="btn btn-secondary btn-sm">View</a>
+                        <form method="post" action="{{ url_for('admin.archive_customer', customer_id=customer.id) }}" data-confirm="Archive this customer account?" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Archive</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted" style="padding:40px;">No customers found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('admin.customers', page=pagination.prev_num, search=search) }}">‹</a>
+    {% else %}
+    <span style="opacity:0.4;">‹</span>
+    {% endif %}
+
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+            {% if p == pagination.page %}
+            <span class="active">{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for('admin.customers', page=p, search=search) }}">{{ p }}</a>
+            {% endif %}
+        {% else %}
+            <span style="border:none;">…</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+    <a href="{{ url_for('admin.customers', page=pagination.next_num, search=search) }}">›</a>
+    {% else %}
+    <span style="opacity:0.4;">›</span>
+    {% endif %}
+</div>
+<p class="text-center text-muted" style="margin-top:12px;font-size:0.85rem;">
+    Showing page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} total customers)
+</p>
+{% endif %}
+{% endblock %}

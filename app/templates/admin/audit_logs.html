@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Activity Logs — CleanHome PH Admin{% endblock %}
+{% block page_title %}Activity Logs{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>Activity Logs</h1>
+        <p class="page-subtitle">Read-only audit trail of all admin actions. Historical logs cannot be modified.</p>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="filters-bar">
+    <form method="get" action="{{ url_for('admin.audit_logs') }}" style="display:flex;gap:12px;align-items:flex-end;width:100%;">
+        <div class="filter-group" style="flex:1;max-width:380px;">
+            <label for="search">Search Logs</label>
+            <input type="text" id="search" name="search" value="{{ search }}" placeholder="Search by action, entity, or user email…">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">🔍 Search</button>
+        {% if search %}<a href="{{ url_for('admin.audit_logs') }}" class="btn btn-secondary btn-sm">Clear</a>{% endif %}
+    </form>
+</div>
+
+<!-- Logs Table -->
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Administrator</th>
+                <th>Action</th>
+                <th>Entity Type</th>
+                <th>Entity ID</th>
+                <th>IP Address</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td style="white-space:nowrap;font-size:0.82rem;">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{{ log.user.email if log.user else 'System' }}</td>
+                <td><span class="badge badge-info">{{ log.action|replace('_',' ')|title }}</span></td>
+                <td>{{ log.entity_type|title }}</td>
+                <td>{{ log.entity_id or '—' }}</td>
+                <td style="font-size:0.82rem;color:var(--text-muted);">{{ log.ip_address or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted" style="padding:40px;">No activity logs found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('admin.audit_logs', page=pagination.prev_num, search=search) }}">‹</a>
+    {% else %}
+    <span style="opacity:0.4;">‹</span>
+    {% endif %}
+
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+            {% if p == pagination.page %}
+            <span class="active">{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for('admin.audit_logs', page=p, search=search) }}">{{ p }}</a>
+            {% endif %}
+        {% else %}
+            <span style="border:none;">…</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+    <a href="{{ url_for('admin.audit_logs', page=pagination.next_num, search=search) }}">›</a>
+    {% else %}
+    <span style="opacity:0.4;">›</span>
+    {% endif %}
+</div>
+<p class="text-center text-muted" style="margin-top:12px;font-size:0.85rem;">
+    Showing page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} total logs)
+</p>
+{% endif %}
+{% endblock %}

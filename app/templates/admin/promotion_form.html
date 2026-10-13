@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} — CleanHome PH Admin{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>{{ title }}</h1>
+        <p class="page-subtitle">Set up the promo code, discount rules, and validity period.</p>
+    </div>
+    <a href="{{ url_for('admin.promotions') }}" class="btn btn-secondary btn-sm">← Back to Promotions</a>
+</div>
+
+<div class="dashboard-card" style="max-width:720px;">
+    <div class="dashboard-card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    {{ form.code.label }}
+                    {{ form.code(class="form-control", placeholder="e.g., WELCOME10") }}
+                    {% for error in form.code.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.discount_type.label }}
+                    {{ form.discount_type(class="form-control") }}
+                    {% for error in form.discount_type.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                {{ form.description.label }}
+                {{ form.description(class="form-control", rows=3) }}
+                {% for error in form.description.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    {{ form.discount_value.label }}
+                    {{ form.discount_value(class="form-control", step="0.01") }}
+                    {% for error in form.discount_value.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.min_order_value.label }}
+                    {{ form.min_order_value(class="form-control", step="0.01") }}
+                    {% for error in form.min_order_value.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.max_discount_amount.label }}
+                    {{ form.max_discount_amount(class="form-control", step="0.01") }}
+                    {% for error in form.max_discount_amount.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    {{ form.start_date.label }}
+                    {{ form.start_date(class="form-control") }}
+                    {% for error in form.start_date.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-group">
+                    {{ form.end_date.label }}
+                    {{ form.end_date(class="form-control") }}
+                    {% for error in form.end_date.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                {{ form.usage_limit.label }}
+                {{ form.usage_limit(class="form-control") }}
+                {% for error in form.usage_limit.errors %}<div class="error-message">{{ error }}</div>{% endfor %}
+            </div>
+            <div style="display:flex;gap:24px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                    {{ form.is_stackable(class="form-check") }}
+                    <span>{{ form.is_stackable.label.text }}</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                    {{ form.is_active(class="form-check") }}
+                    <span>{{ form.is_active.label.text }}</span>
+                </label>
+            </div>
+            <div style="margin-top:20px;display:flex;gap:10px;">
+                <button type="submit" class="btn btn-primary">Save Promotion</button>
+                <a href="{{ url_for('admin.promotions') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

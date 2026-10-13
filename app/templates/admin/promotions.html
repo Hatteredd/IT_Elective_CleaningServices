@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Promotions & Discounts — CleanHome PH Admin{% endblock %}
+{% block page_title %}Promotions & Discounts{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1>Promotions &amp; Discounts</h1>
+        <p class="page-subtitle">Create and manage promo codes, discounts, and special offers.</p>
+    </div>
+    <a href="{{ url_for('admin.add_promotion') }}" class="btn btn-primary btn-sm">＋ Add Promotion</a>
+</div>
+
+<!-- Search -->
+<div class="filters-bar">
+    <form method="get" action="{{ url_for('admin.promotions') }}" style="display:flex;gap:12px;align-items:flex-end;width:100%;">
+        <div class="filter-group" style="flex:1;max-width:340px;">
+            <label for="search">Search by Promo Code</label>
+            <input type="text" id="search" name="search" value="{{ search }}" placeholder="Enter promo code…">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">🔍 Search</button>
+        {% if search %}<a href="{{ url_for('admin.promotions') }}" class="btn btn-secondary btn-sm">Clear</a>{% endif %}
+    </form>
+</div>
+
+<!-- Promotions Table -->
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Code</th>
+                <th>Description</th>
+                <th>Discount</th>
+                <th>Validity</th>
+                <th>Usage</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for promo in promotions %}
+            <tr>
+                <td>#{{ promo.id }}</td>
+                <td><code style="background:var(--primary-light);color:var(--primary-dark);padding:4px 10px;border-radius:6px;font-weight:700;">{{ promo.code }}</code></td>
+                <td>{{ promo.description or '—' }}</td>
+                <td>
+                    {% if promo.discount_type == 'percentage' %}
+                        <strong>{{ promo.discount_value }}%</strong> off
+                    {% else %}
+                        <strong>₱{{ '{:,.2f}'.format(promo.discount_value) }}</strong> off
+                    {% endif %}
+                </td>
+                <td>
+                    <small>{{ promo.start_date.strftime('%b %d, %Y') }}<br>to {{ promo.end_date.strftime('%b %d, %Y') }}</small>
+                </td>
+                <td>
+                    {{ promo.usage_count }} / {{ promo.usage_limit or '∞' }}
+                </td>
+                <td>
+                    {% if promo.is_active %}
+                        <span class="badge badge-success">Active</span>
+                    {% else %}
+                        <span class="badge badge-muted">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <form method="post" action="{{ url_for('admin.toggle_promotion', promotion_id=promo.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm">
+                                {% if promo.is_active %}⏸ Deactivate{% else %}▶ Activate{% endif %}
+                            </button>
+                        </form>
+                        <a href="{{ url_for('admin.edit_promotion', promotion_id=promo.id) }}" class="btn btn-outline btn-sm">Edit</a>
+                        <form method="post" action="{{ url_for('admin.archive_promotion', promotion_id=promo.id) }}" data-confirm="Archive this promotion?" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Archive</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted" style="padding:40px;">No promotions found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
