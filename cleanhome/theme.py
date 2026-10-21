@@ -1,0 +1,337 @@
+"""Design tokens, font detection, type scale, and ttk styles.
+
+All colours, spacing, and font sizes used by the UI are defined here.
+Pages import from this module and never hard-code a colour or a pixel value.
+"""
+
+from __future__ import annotations
+
+import tkinter as tk
+from tkinter import font as tkfont
+from tkinter import ttk
+
+# ── Colours ──────────────────────────────────────────────────────────────────
+BG_PAGE = "#F5F6F8"      # page background (very light gray)
+BG_SURFACE = "#FFFFFF"   # cards, panels, header
+BORDER = "#E5E7EB"       # 1px card borders (fake shadow edge)
+SHADOW_EDGE = "#D9DCE1"  # 1px bottom/right edge to fake a soft shadow
+PRIMARY = "#0A6CF0"      # buttons, links, prices, active nav
+PRIMARY_HOVER = "#0856C4"
+PRIMARY_SOFT = "#E8F1FE"  # active nav pill, selected rows, badges bg
+TEXT = "#000000"         # headings
+TEXT_BODY = "#666666"    # body text
+TEXT_MUTED = "#9CA3AF"   # captions, hints
+DANGER = "#E5484D"       # errors
+DANGER_SOFT = "#FDECEC"
+SUCCESS = "#12A150"      # confirmed / completed
+SUCCESS_SOFT = "#E6F6EC"
+WARNING = "#B7791F"      # pending
+WARNING_SOFT = "#FEF3C7"
+TEXT_ON_ACCENT = "#FFFFFF"  # text drawn on a coloured button or toast
+TOAST_BG = "#111827"     # the dark "Copied!" toast
+TOAST_TEXT = "#FFFFFF"   # text on the dark toast
+TOGGLE_ON = PRIMARY      # a switch that is on
+TOGGLE_OFF = "#D1D5DB"   # a switch that is off
+TOGGLE_THUMB = "#FFFFFF"  # the knob of a switch
+CHECK_MARK = PRIMARY     # the tick inside a checked box
+INPUT_BG = "#F9FAFB"     # the light fill of a text input
+
+# ── Spacing (16px grid: multiples of 4 and 8 only) ───────────────────────────
+SPACE_XS, SPACE_SM, SPACE_MD, SPACE_LG, SPACE_XL = 4, 8, 16, 24, 32
+
+# ── Sizes ────────────────────────────────────────────────────────────────────
+BUTTON_HEIGHT = 40
+INPUT_HEIGHT = 40
+CARD_PAD = 16
+CONTENT_MAX_WIDTH = 1100
+NAVBAR_HEIGHT = 64
+ACCENT_HEIGHT = 3
+DIVIDER_HEIGHT = 1
+TOAST_HEIGHT = 40
+FOCUS_RING = 2           # the 2px PRIMARY ring drawn around a focused input
+ICON_SIZE = 40           # the square icon tile on a card
+TOGGLE_WIDTH = 40
+TOGGLE_HEIGHT = 22
+CHECK_SIZE = 18          # the square box of a check box
+
+# ── Fonts ────────────────────────────────────────────────────────────────────
+# The reference design uses Geist Sans / Inter, which are not installed by
+# default. Detect what this machine actually has and fall back in order.
+FONT_CANDIDATES = ("Inter", "Geist", "Segoe UI", "Helvetica")
+FONT_FAMILY = "Segoe UI"
+FONT_AVAILABLE: list[str] = []
+
+
+def detect_fonts() -> str:
+    """Pick the first available family from ``FONT_CANDIDATES``."""
+    global FONT_FAMILY, FONT_AVAILABLE
+    try:
+        available = {name.lower() for name in tkfont.families()}
+    except tk.TclError:
+        available = set()
+    FONT_AVAILABLE = sorted(available)
+    for candidate in FONT_CANDIDATES:
+        if candidate.lower() in available:
+            FONT_FAMILY = candidate
+            return candidate
+    FONT_FAMILY = "TkDefaultFont"
+    return FONT_FAMILY
+
+
+# Type scale tokens: (size, weight)
+SCALE = {
+    "H1": (24, "bold"),
+    "H2": (16, "bold"),
+    "BODY": (11, "normal"),
+    "CAPTION": (10, "normal"),
+    "PRICE": (16, "bold"),
+}
+
+
+def font(token: str) -> tuple[str, int, str]:
+    """Return a Tk font tuple for a type-scale token."""
+    size, weight = SCALE.get(token, SCALE["BODY"])
+    return (FONT_FAMILY, size, weight)
+
+
+def configure_style(root: tk.Misc) -> None:
+    """Apply the CleanHome theme to every widget under ``root``."""
+    detect_fonts()
+    style = ttk.Style(root)
+    try:
+        style.theme_use("clam")
+    except tk.TclError:
+        pass
+
+    style.configure(".", background=BG_PAGE, foreground=TEXT, font=font("BODY"))
+    style.configure("TFrame", background=BG_PAGE)
+    style.configure("Surface.TFrame", background=BG_SURFACE)
+    style.configure("Sidebar.TFrame", background=BG_SURFACE)
+    style.configure("TLabel", background=BG_PAGE, foreground=TEXT, font=font("BODY"))
+    style.configure("Surface.TLabel", background=BG_SURFACE, foreground=TEXT, font=font("BODY"))
+    style.configure("H1.TLabel", font=font("H1"), foreground=TEXT)
+    style.configure("H2.TLabel", font=font("H2"), foreground=TEXT)
+    style.configure("Body.TLabel", font=font("BODY"), foreground=TEXT_BODY)
+    style.configure("Caption.TLabel", font=font("CAPTION"), foreground=TEXT_MUTED)
+    style.configure("Surface.Caption.TLabel", background=BG_SURFACE, font=font("CAPTION"), foreground=TEXT_MUTED)
+    style.configure("Price.TLabel", background=BG_SURFACE, font=font("PRICE"), foreground=PRIMARY)
+
+    style.configure("TEntry", fieldbackground=BG_SURFACE, bordercolor=BORDER,
+                    lightcolor=BORDER, darkcolor=BORDER, padding=(10, 8),
+                    insertcolor=TEXT)
+    style.map("TEntry",
+              bordercolor=[("focus", PRIMARY)],
+              lightcolor=[("focus", PRIMARY)],
+              darkcolor=[("focus", PRIMARY)])
+
+    # The input inside a FormField carries no border of its own: the 2px ring
+    # drawn around it by the field is the only border.
+    style.configure("Field.TEntry", fieldbackground=BG_SURFACE, bordercolor=BG_SURFACE,
+                    lightcolor=BG_SURFACE, darkcolor=BG_SURFACE, padding=(10, 8),
+                    insertcolor=TEXT)
+    style.map("Field.TEntry",
+              bordercolor=[("focus", BG_SURFACE)],
+              lightcolor=[("focus", BG_SURFACE)],
+              darkcolor=[("focus", BG_SURFACE)])
+
+    style.configure("Primary.TButton", padding=(18, 10), font=font("BODY"),
+                    background=PRIMARY, foreground="#FFFFFF", borderwidth=0, focusthickness=0)
+    style.map("Primary.TButton",
+              background=[("pressed", PRIMARY_HOVER), ("active", PRIMARY_HOVER), ("disabled", "#B9C6D4")],
+              foreground=[("disabled", "#F0F3F6")])
+
+    style.configure("Secondary.TButton", padding=(18, 10), font=font("BODY"),
+                    background=BG_SURFACE, foreground=TEXT, borderwidth=1)
+    style.map("Secondary.TButton",
+              background=[("pressed", BG_PAGE), ("active", BG_PAGE), ("disabled", BG_SURFACE)],
+              foreground=[("disabled", TEXT_MUTED)],
+              bordercolor=[("!disabled", BORDER), ("disabled", BORDER)],
+              lightcolor=[("!disabled", BORDER)], darkcolor=[("!disabled", BORDER)])
+
+    style.configure("Danger.TButton", padding=(18, 10), font=font("BODY"),
+                    background=DANGER, foreground="#FFFFFF", borderwidth=0, focusthickness=0)
+    style.map("Danger.TButton",
+              background=[("pressed", "#C43B40"), ("active", "#C43B40"), ("disabled", "#EFC0C2")],
+              foreground=[("disabled", "#FDF3F3")])
+
+    style.configure("TCombobox", fieldbackground=BG_SURFACE, background=BG_SURFACE,
+                    bordercolor=BORDER, lightcolor=BORDER, darkcolor=BORDER,
+                    arrowcolor=TEXT_BODY, padding=(8, 6))
+    style.map("TCombobox",
+              bordercolor=[("focus", PRIMARY)],
+              lightcolor=[("focus", PRIMARY)], darkcolor=[("focus", PRIMARY)],
+              fieldbackground=[("readonly", BG_SURFACE)])
+
+    style.configure("Treeview", background=BG_SURFACE, fieldbackground=BG_SURFACE,
+                    foreground=TEXT, rowheight=28, borderwidth=0, font=font("BODY"))
+    style.configure("Treeview.Heading", background=BG_PAGE, foreground=TEXT_BODY,
+                    font=font("CAPTION"), relief="flat", padding=(6, 6))
+    style.map("Treeview.Heading", background=[("active", BG_PAGE)])
+
+    style.configure("TNotebook", background=BG_PAGE, borderwidth=0)
+    style.configure("TNotebook.Tab", padding=(14, 8), font=font("BODY"))
+    style.map("TNotebook.Tab", background=[("selected", BG_SURFACE)])
+
+    for name, bg, fg in (
+        ("Badge.Pending", WARNING_SOFT, WARNING),
+        ("Badge.Confirmed", PRIMARY_SOFT, PRIMARY),
+        ("Badge.InProgress", PRIMARY_SOFT, PRIMARY),
+        ("Badge.Completed", SUCCESS_SOFT, SUCCESS),
+        ("Badge.Cancelled", DANGER_SOFT, DANGER),
+        ("Badge.Neutral", BG_PAGE, TEXT_MUTED),
+    ):
+        style.configure(f"{name}.TLabel", background=bg, foreground=fg,
+                        font=font("CAPTION"), padding=(8, 3))
+
+
+# ── Badge colours per status ─────────────────────────────────────────────────
+STATUS_BADGE = {
+    "pending": ("Badge.Pending", WARNING),
+    "confirmed": ("Badge.Confirmed", PRIMARY),
+    "in_progress": ("Badge.InProgress", PRIMARY),
+    "completed": ("Badge.Completed", SUCCESS),
+    "cancelled": ("Badge.Cancelled", DANGER),
+}
+
+
+def badge_style(status: str) -> tuple[str, str]:
+    """Return the (style name, colour) for a booking status."""
+    return STATUS_BADGE.get(status, ("Badge.Neutral", TEXT_MUTED))
+
+
+# ── Widget factories ─────────────────────────────────────────────────────────
+def make_card(parent: tk.Misc, **kwargs) -> tk.Frame:
+    """Create a card with a 1px border and a fake shadow edge."""
+    outer = tk.Frame(parent, bg=SHADOW_EDGE, **kwargs)
+    inner = tk.Frame(outer, bg=BG_SURFACE, highlightbackground=BORDER,
+                     highlightthickness=1, bd=0)
+    inner.pack(fill="both", expand=True, padx=(0, 1), pady=(0, 1))
+    outer.inner = inner
+    return outer
+
+
+def make_badge(parent: tk.Misc, text: str, status: str) -> ttk.Label:
+    """Return a status pill."""
+    style, _ = badge_style(status)
+    return ttk.Label(parent, text=text, style=f"{style}.TLabel")
+
+
+def make_treeview_with_scrollbar(parent: tk.Misc, columns, headings=None,
+                                 widths=None, height=12, **kwargs):
+    """Create a Treeview with an attached vertical scrollbar."""
+    container = ttk.Frame(parent, style="TFrame")
+    tree = ttk.Treeview(container, columns=columns, show="headings",
+                         height=height, **kwargs)
+    vsb = ttk.Scrollbar(container, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=vsb.set)
+    tree.pack(side="left", fill="both", expand=True)
+    vsb.pack(side="right", fill="y")
+
+    if headings:
+        for col, head in zip(columns, headings):
+            tree.heading(col, text=head)
+    else:
+        for col in columns:
+            tree.heading(col, text=col.replace("_", " ").title())
+
+    if widths:
+        for col, width in zip(columns, widths):
+            tree.column(col, width=width, anchor="w")
+
+    tree.tag_configure("even", background=BG_SURFACE)
+    tree.tag_configure("odd", background="#FAFAFB")
+    return container, tree
+
+
+class ScrollableFrame(ttk.Frame):
+    """A vertically scrollable container.
+
+    The scroll region is derived from the embedded window only, so decorative
+    content can never inflate it and leave a blank slab under the content.
+    The scrollbar hides itself whenever the content fits.
+    """
+
+    def __init__(self, parent: tk.Misc, **kwargs):
+        super().__init__(parent, style="TFrame", **kwargs)
+        self.canvas = tk.Canvas(self, bg=BG_PAGE, highlightthickness=0, bd=0)
+        self.vsb = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.inner = ttk.Frame(self.canvas, style="TFrame")
+        self._window_id = self.canvas.create_window((0, 0), window=self.inner, anchor="nw")
+
+        self.inner.bind("<Configure>", self._on_inner_configure)
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+        self.canvas.configure(yscrollcommand=self._on_scroll_set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self._scrollbar_visible = False
+        self._sync_scrollbar()
+
+        self.canvas.bind("<Enter>", self._bind_wheel)
+        self.canvas.bind("<Leave>", self._unbind_wheel)
+
+    # -- layout ----------------------------------------------------------------
+    def _on_inner_configure(self, event: tk.Event) -> None:
+        self._update_scrollregion()
+        self._sync_scrollbar()
+
+    def _on_canvas_configure(self, event: tk.Event) -> None:
+        self.canvas.itemconfig(self._window_id, width=event.width)
+        self._update_scrollregion()
+        self._sync_scrollbar()
+
+    def _update_scrollregion(self) -> None:
+        bbox = self.canvas.bbox(self._window_id)
+        if bbox:
+            self.canvas.configure(scrollregion=bbox)
+
+    def _on_scroll_set(self, first, last) -> None:
+        if self.vsb.winfo_ismapped():
+            self.vsb.set(first, last)
+
+    def _sync_scrollbar(self) -> None:
+        """Show the scrollbar only when the content is taller than the view."""
+        bbox = self.canvas.bbox(self._window_id)
+        if not bbox:
+            return
+        content_height = bbox[3] - bbox[1]
+        view_height = self.canvas.winfo_height()
+        needed = content_height > view_height + 2
+        if needed and not self._scrollbar_visible:
+            self.vsb.pack(side="right", fill="y")
+            self._scrollbar_visible = True
+        elif not needed and self._scrollbar_visible:
+            self.vsb.pack_forget()
+            self._scrollbar_visible = False
+
+    # -- mouse wheel -----------------------------------------------------------
+    def _bind_wheel(self, event: tk.Event) -> None:
+        self.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.bind_all("<Button-4>", self._on_mousewheel)
+        self.bind_all("<Button-5>", self._on_mousewheel)
+
+    def _unbind_wheel(self, event: tk.Event) -> None:
+        self.unbind_all("<MouseWheel>")
+        self.unbind_all("<Button-4>")
+        self.unbind_all("<Button-5>")
+
+    def _contains(self, widget: tk.Misc) -> bool:
+        current: tk.Misc | None = widget
+        while current is not None:
+            if current is self:
+                return True
+            current = getattr(current, "master", None)
+        return False
+
+    def _on_mousewheel(self, event: tk.Event) -> None:
+        widget = self.winfo_containing(event.x_root, event.y_root)
+        if widget is None or not self._contains(widget):
+            return
+        if getattr(event, "num", None) == 4:
+            steps = -1
+        elif getattr(event, "num", None) == 5:
+            steps = 1
+        else:
+            delta = getattr(event, "delta", 0)
+            steps = int(delta / 120) if abs(delta) >= 120 else int(delta)
+        if steps:
+            self.canvas.yview_scroll(-steps, "units")

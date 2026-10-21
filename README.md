@@ -1,207 +1,200 @@
 # CleanHome PH — Home Cleaning Service Desktop Application
 
-A complete Tkinter desktop GUI application for managing home cleaning services in the Philippines.
+A desktop application for managing a home-cleaning business in the Philippines:
+customers browse the catalogue and book a cleaning, and administrators manage
+services, promotions, bookings, customers, and revenue.
 
-## Technology Stack
-
-- **UI / Frontend**: Python standard library Tkinter + ttk (multi-frame desktop GUI)
-- **Database & ORM**: SQLite with SQLAlchemy
-- **Authentication**: Password hashing with Werkzeug
-- **Payment**: Sandbox/mock payment (PayMongo-ready)
+The app is written in **Python 3.11+** with **Tkinter/ttk** and uses only the
+**Python standard library** — no Flask, no SQLAlchemy, no third-party packages.
 
 ---
 
-## Installation
-
-### 1. Clone and enter the project
+## Running the app
 
 ```bash
-cd IT_Service
+python -m cleanhome.main
 ```
 
-### 2. Create and activate a virtual environment
+or, from the project root:
 
 ```bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
+python cleanhome/main.py
 ```
 
-### 3. Install dependencies
+There is nothing to install. If `tkinter` is missing, re-run the Python
+installer and tick **"tcl/tk and IDLE"**.
+
+### First run
+
+The first time the app starts it creates the database file `cleanhome.db` in
+the project root, seeds the service catalogue and the two starter promotions,
+and creates two accounts:
+
+| Role     | Email                 | Password        |
+|----------|-----------------------|-----------------|
+| Admin    | `admin@cleanhome.ph`  | printed to the console once |
+| Customer | `customer@cleanhome.ph`| printed to the console once |
+
+The passwords are random and are printed **only once**, in the console window
+that starts the app:
+
+```
+================================================================
+CleanHome first-run accounts. These passwords are shown only once.
+================================================================
+  administrator  admin@cleanhome.ph       xR7kQ2mNvB4pZa
+  customer       customer@cleanhome.ph    8dHt3FyWc9LnRs
+================================================================
+```
+
+Copy them down before closing the console. If you lose them, delete
+`cleanhome.db` and start the app again to get a fresh pair.
+
+From the admin account you can create more administrators from
+**Admin → Customers → Add Admin**.
+
+### Locked out? Reset the admin password
+
+If the only administrator is locked out, reset the password from a terminal —
+no desktop session and no second administrator needed:
 
 ```bash
-pip install -r requirements.txt
+python -m cleanhome.reset_password --list                      # show the admin accounts
+python -m cleanhome.reset_password --email admin@cleanhome.ph  # type a new password
+python -m cleanhome.reset_password --email admin@cleanhome.ph --generate
 ```
 
-### 4. Configure environment variables
+The tool sets the new password, clears the five-failed-attempts lockout, and
+re-activates the account. It refuses a password that breaks the policy
+(8 characters, at least one letter and one number), and it never prints a
+password you typed yourself.
+
+---
+
+## What is still to do
+
+[`REMAINING_WORK.md`](REMAINING_WORK.md) lists every spec item that is not
+finished yet — the audit was done against `CLEANHOME_IMPROVEMENT_SPEC.md`
+section by section, and anything that was already built and tested is not
+repeated there.
+
+---
+
+## Folder map
+
+```
+cleanhome/
+├─ main.py                  # entry point: logging, database setup, first-run accounts
+├─ config.py                # business rules, company details, paths
+├─ utils.py                 # formatting helpers (peso, dates, times)
+├─ theme.py                 # design tokens, fonts, ttk styles, ScrollableFrame
+├─ db.py                    # connection, schema, migrations, seed data
+├─ security.py              # PBKDF2 hashing, password policy, random passwords
+├─ reset_password.py        # command-line admin password reset
+├─ services/                # logic layer — never imports tkinter
+│   ├─ auth_service.py      # register, login, lockout, profile, customers
+│   ├─ booking_service.py   # scheduling, capacity, pricing, booking lifecycle
+│   ├─ catalog_service.py   # services and promotions
+│   └─ report_service.py    # dashboard figures, revenue report, CSV export
+├─ ui/
+│   ├─ components.py        # atoms → molecules → organisms (the whole UI kit)
+│   ├─ templates.py         # page shells: public, admin, auth
+│   ├─ app.py               # window, session, router, role gates
+│   └─ pages/               # one page class per file
+│       ├─ home.py  services.py  service_details.py  promotions.py
+│       ├─ about.py  contact.py  login.py  signup.py
+│       ├─ book.py  my_bookings.py  profile.py  change_password.py
+│       └─ admin_dashboard.py  admin_bookings.py  admin_services.py
+│           admin_promotions.py  admin_customers.py  admin_reports.py
+├─ tests/                   # unittest suite for the logic layer
+│   └─ ui/harness.py        # manual checks that open a real window
+├─ AGENTS.md                # the rules for working on this package
+└─ README.md                # a map of the package
+```
+
+Rules the code follows:
+
+* the logic layer never imports Tkinter, so it can be unit-tested without a screen;
+* the UI calls the services, the services call the database;
+* every page class is in its own file and only receives `app` and `session`;
+* one `Session` object holds the signed-in user and is cleared on logout.
+
+---
+
+## Business rules
+
+All of these live in `cleanhome/config.py`:
+
+| Rule | Value |
+|------|-------|
+| Cleaning hours | 8:00 AM – 6:00 PM, every day |
+| Start-time step | 30 minutes |
+| Team capacity | 3 concurrent cleanings |
+| Minimum notice | 3 hours before the start time |
+| Cancellation cutoff | 24 hours before the start time |
+| Booking window | 30 days ahead |
+| Service duration | 15 – 480 minutes |
+| Notes | 300 characters maximum |
+| Percentage discount | 1 – 90 % |
+| Failed logins | 5, then locked for 5 minutes |
+| Password hashing | PBKDF2-HMAC-SHA256, 200 000 iterations, 16-byte salt |
+
+---
+
+## Running the tests
 
 ```bash
-cp .env.example .env
+python -m unittest discover -s cleanhome/tests -t .
 ```
 
-Edit `.env` and set at minimum:
+The suite covers password hashing, the lockout, sign-up validation, the
+booking rules (past date, business hours, capacity, price and promotion
+maths), the booking status flow, the permission checks, the
+archive-instead-of-delete rule, the shared formatting helpers, and the
+command-line password reset. Each test
+runs against its own throw-away database file, so your real `cleanhome.db`
+is never touched.
 
-```
-SECRET_KEY=change-this-to-a-long-random-string
-DATABASE_URL=sqlite:///instance/app.db
-```
-
-For PayMongo (optional, sandbox payments work without it):
-
-```
-PAYMONGO_PUBLIC_KEY=pk_test_...
-PAYMONGO_SECRET_KEY=sk_test_...
-PAYMONGO_WEBHOOK_SECRET=whsec_...
-```
-
-### 5. Initialise the database
+There is a second, manual harness for the interface. It opens a real
+window and presses the buttons — sign-up, sign-in, booking, cancelling,
+rescheduling, the admin status flow, and the three admin dialogs:
 
 ```bash
-python init_db.py
-```
-
-This creates all tables and handles schema migrations for existing databases.
-
-### 6. Seed sample data (services, add-ons, promo codes)
-
-```bash
-python seed_data.py
-```
-
-### 7. Create an admin account
-
-```bash
-python create_admin.py
+python -m cleanhome.tests.ui.harness
 ```
 
 ---
 
-## Running the Application
- 
-```bash
-python run.py
-```
- 
-This launches the Tkinter desktop GUI window.
- 
-You can also run:
-```bash
-python gui_app.py
-```
+## Where the data lives
+
+| File | What it is |
+|------|------------|
+| `cleanhome.db` | the live SQLite database |
+| `app.log` | the application log |
+| `backup_original/` | a copy of the original project taken before the rewrite |
+
+Delete `cleanhome.db` to start over from a fresh database.
 
 ---
 
-## Running Tests
+## Known limitations
 
-```bash
-pytest
-```
-
-Or with verbose output:
-
-```bash
-pytest -v
-```
-
-Test files cover:
-
-| File | Coverage |
-|---|---|
-| `tests/test_models.py` | User auth, registration, bookings, cleaners |
-| `tests/test_auth_permissions.py` | Role access control, password reset flow |
-| `tests/test_pricing.py` | Server-side price calculation, promo validation |
-| `tests/test_availability.py` | Double-booking and cleaner conflict detection |
-| `tests/test_payment.py` | Payment creation, status updates, uniqueness |
-
----
-
-## Project Structure
-
-```
-IT_Service/
-├── app/
-│   ├── __init__.py           # App factory + context processor
-│   ├── models.py             # All SQLAlchemy models
-│   ├── forms.py              # WTForms (CSRF-protected)
-│   ├── utils.py              # Shared helpers (notifications)
-│   ├── routes/
-│   │   ├── auth.py           # Login, register, forgot/reset password
-│   │   ├── public.py         # Home, services, promotions, about, contact, FAQ
-│   │   ├── customer.py       # Dashboard, booking, payment, reviews, reschedule
-│   │   └── admin.py          # Full admin panel with audit logging
-│   ├── static/css/style.css  # Responsive stylesheet
-│   └── templates/            # Jinja2 templates (base + per-blueprint)
-├── tests/                    # Pytest test suite
-├── instance/app.db           # SQLite database (git-ignored)
-├── init_db.py                # DB initialisation + migrations
-├── seed_data.py              # Sample services, add-ons, promo codes
-├── create_admin.py           # Interactive admin account creation
-├── .env.example              # Environment variable template
-├── requirements.txt          # Pinned dependencies
-└── run.py                    # Development entry point
-```
-
----
-
-## Key Features
-
-**Public**
-- Service catalogue with pricing and add-ons
-- Active promotions listing
-- Contact form (stored as inquiries)
-- About and FAQ pages
-- Mobile-friendly navigation
-
-**Customer accounts**
-- Register, log in, log out, forgot/reset password
-- Manage profile and multiple addresses
-- Book services with add-ons and promo codes
-- Reschedule or cancel pending/confirmed bookings
-- Mock/sandbox payment flow
-- View booking history, payment status, receipts
-- Submit reviews after completed bookings
-- In-app notification centre
-
-**Admin panel**
-- Dashboard with live stats (revenue, bookings, customers)
-- Create, edit, archive, restore services and add-ons
-- Manage promotions (percentage/fixed, expiry, usage limits)
-- View all bookings; update status; assign cleaners
-- Customer list with account activate/deactivate
-- Cleaner list with availability toggle
-- Sales reports (last 30 days)
-- Audit log of admin actions
-
----
-
-## Security Notes
-
-- Passwords hashed with Werkzeug (`scrypt` / `pbkdf2`)
-- CSRF protection on every form via Flask-WTF
-- Role-based access control on all routes
-- Prices and discounts always calculated server-side
-- Payment references include a random token — never trust client-submitted totals
-- Inactive accounts cannot log in
-- Password reset tokens expire after 1 hour and are single-use
-- Do **not** commit `.env` to version control
-- Use a strong `SECRET_KEY` in production
-- Enable HTTPS in production
-
----
-
-## Implementation Status
-
-| Phase | Description | Status |
-|---|---|---|
-| 1 | Project setup, Flask app, database, base layout | ✅ |
-| 2 | Registration, login, roles, password reset | ✅ |
-| 3 | Public pages, services, pricing, promotions | ✅ |
-| 4 | Customer booking, scheduling, availability | ✅ |
-| 5 | Payment integration (sandbox mode) | ✅ |
-| 6 | Admin dashboard and management features | ✅ |
-| 7 | Cleaner assignment, notifications, reviews, audit logs | ✅ |
-| 8 | Automated tests, security hardening, README | ✅ |
+* **Tkinter is a desktop toolkit.** There is no web version, no multi-user
+  server, and no live sync between two computers.
+* **The date and time pickers are dropdown lists.** They are limited to the
+  booking window (30 days ahead) and to the 30-day report range.
+* **No email or SMS.** Booking confirmations and cancellation notices are
+  only shown inside the app; there is no mail server integration.
+* **No online payment.** Prices are quoted and recorded, but money is
+  collected outside the app.
+* **One admin password reset.** A locked-out administrator has to be
+  re-activated from another administrator; there is no email-based reset.
+  There is a command-line tool for the case where the locked-out account is
+  the only administrator: `python -m cleanhome.reset_password`.
+* **The text is English only**, and the interface is not translated.
+* **The admin tables have no pagination.** A few hundred bookings will make
+  them slow to scroll.
+* **There is no bulk cancel** and no per-booking team assignment.
+* **The screens are an approximation of the reference design.** The reference
+  image `ui that i like.webp` is in the project root, and matching it more
+  closely is the next piece of work.

@@ -9,7 +9,7 @@ venv/
 ENV/
 .venv
 
-# Flask
+# Legacy web app leftovers
 instance/
 .webassets-cache
 
@@ -26,6 +26,12 @@ instance/
 .DS_Store
 Thumbs.db
 
-# Database
+# Database and logs
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
+app.log
+
+# Pre-rewrite backup of the original project
+backup_original/
