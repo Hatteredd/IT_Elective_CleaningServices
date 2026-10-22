@@ -22,6 +22,23 @@ def setup_logging() -> None:
 
 def main() -> None:
     """Bootstrap the database and launch the UI."""
+    try:
+        import ctypes
+
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
+    try:
+        import tkinter as tk
+
+        root_probe = tk.Tk()
+        root_probe.withdraw()
+        try:
+            root_probe.tk.call("tk", "scaling", 1.0)
+        finally:
+            root_probe.destroy()
+    except Exception:
+        pass
     setup_logging()
     logging.info("Starting CleanHome")
     db.init_db()

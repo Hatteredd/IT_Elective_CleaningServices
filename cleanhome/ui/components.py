@@ -250,10 +250,23 @@ class _ClickButton(ttk.Button):
     """A button that shows the pointer cursor only while it is clickable."""
 
     def __init__(self, parent, text: str, command: Callable | None = None, **kwargs):
+        kwargs.setdefault("padding", (theme.BUTTON_PAD_X, theme.BUTTON_PAD_Y))
         super().__init__(parent, text=text, command=command, **kwargs)
+        try:
+            self.configure(height=theme.BUTTON_HEIGHT)
+        except Exception:
+            pass
         self.bind("<Enter>", self._sync_cursor)
         self.bind("<Leave>", self._reset_cursor)
+        self.bind("<Configure>", lambda event: self._ensure_height(), add="+")
         self._sync_cursor()
+        self._ensure_height()
+
+    def _ensure_height(self) -> None:
+        try:
+            self.configure(height=theme.BUTTON_HEIGHT)
+        except Exception:
+            pass
 
     def _sync_cursor(self, event: tk.Event | None = None) -> None:
         if "disabled" in self.state():
@@ -268,20 +281,31 @@ class _ClickButton(ttk.Button):
         super().configure(cnf, **kwargs)
         if "state" in kwargs:
             self._sync_cursor()
+        self._ensure_height()
 
 
 class PrimaryButton(_ClickButton):
     """The single blue call to action."""
 
     def __init__(self, parent, text: str, command: Callable | None = None, **kwargs):
+        kwargs.setdefault("padding", (theme.BUTTON_PAD_X, theme.BUTTON_PAD_Y))
         super().__init__(parent, text=text, command=command, style="Primary.TButton", **kwargs)
+        try:
+            self.configure(height=theme.BUTTON_HEIGHT)
+        except Exception:
+            pass
 
 
 class SecondaryButton(_ClickButton):
     """A white button with a 1px border."""
 
     def __init__(self, parent, text: str, command: Callable | None = None, **kwargs):
+        kwargs.setdefault("padding", (theme.BUTTON_PAD_X, theme.BUTTON_PAD_Y))
         super().__init__(parent, text=text, command=command, style="Secondary.TButton", **kwargs)
+        try:
+            self.configure(height=theme.BUTTON_HEIGHT)
+        except Exception:
+            pass
 
 
 class DangerButton(_ClickButton):
@@ -753,10 +777,10 @@ class NavBar(tk.Frame):
     def _build_auth(self, parent: tk.Frame) -> None:
         app = self.app
         if not app.session.is_authenticated:
-            SecondaryButton(parent, "Log In", command=lambda: app.go("Login")).pack(
-                side="left", padx=theme.SPACE_XS)
-            PrimaryButton(parent, "Sign Up", command=lambda: app.go("Signup")).pack(
-                side="left", padx=theme.SPACE_XS)
+            login_btn = SecondaryButton(parent, "Log In", command=lambda: app.go("Login"))
+            login_btn.pack(side="left", padx=theme.SPACE_XS)
+            signup_btn = PrimaryButton(parent, "Sign Up", command=lambda: app.go("Signup"))
+            signup_btn.pack(side="left", padx=theme.SPACE_XS)
             return
         name = app.session.user.get("full_name", "")
         tk.Label(parent, text=name, bg=theme.BG_SURFACE, fg=theme.TEXT,

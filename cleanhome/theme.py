@@ -42,17 +42,23 @@ DANGER_DISABLED = "#EFC0C2"
 DANGER_DISABLED_TEXT = "#FDF3F3"
 
 # ── Spacing (16px grid: multiples of 4 and 8 only) ───────────────────────────
-SPACE_XS, SPACE_SM, SPACE_MD, SPACE_LG, SPACE_XL = 4, 8, 16, 24, 32
+SPACE_XS, SPACE_SM, SPACE_MD, SPACE_LG, SPACE_XL, SPACE_2XL = 4, 8, 12, 16, 24, 32
 
 # ── Sizes ────────────────────────────────────────────────────────────────────
 BUTTON_HEIGHT = 40
+BUTTON_PAD_X = 18
+BUTTON_PAD_Y = 10
 INPUT_HEIGHT = 40
-CARD_PAD = 16
-CONTENT_MAX_WIDTH = 1100
-NAVBAR_HEIGHT = 64
+INPUT_PAD_X = 12
+INPUT_PAD_Y = 6
+CARD_PAD = 20
+CONTENT_MAX_WIDTH = 1120
+NAVBAR_HEIGHT = 72
+NAV_HEIGHT = 72
 ACCENT_HEIGHT = 3
 DIVIDER_HEIGHT = 1
-TOAST_HEIGHT = 40
+FOOTER_HEIGHT = 160
+TOAST_HEIGHT = 44
 FOCUS_RING = 2           # the 2px PRIMARY ring drawn around a focused input
 ICON_SIZE = 40           # the square icon tile on a card
 TOGGLE_WIDTH = 40
@@ -211,14 +217,14 @@ def configure_style(root: tk.Misc) -> None:
               bordercolor=[("focus", BG_SURFACE)],
               lightcolor=[("focus", BG_SURFACE)],
               darkcolor=[("focus", BG_SURFACE)])
-
-    style.configure("Primary.TButton", padding=(18, 10), font=font("BODY"),
-                    background=PRIMARY, foreground=TEXT_ON_ACCENT, borderwidth=0, focusthickness=0)
+    style.configure("Primary.TButton", padding=(BUTTON_PAD_X, BUTTON_PAD_Y), font=font("BODY"),
+                    background=PRIMARY, foreground=TEXT_ON_ACCENT, borderwidth=0,
+                    focusthickness=0)
     style.map("Primary.TButton",
               background=[("pressed", PRIMARY_HOVER), ("active", PRIMARY_HOVER), ("disabled", PRIMARY_DISABLED)],
               foreground=[("disabled", PRIMARY_DISABLED_TEXT)])
 
-    style.configure("Secondary.TButton", padding=(18, 10), font=font("BODY"),
+    style.configure("Secondary.TButton", padding=(BUTTON_PAD_X, BUTTON_PAD_Y), font=font("BODY"),
                     background=BG_SURFACE, foreground=TEXT, borderwidth=1)
     style.map("Secondary.TButton",
               background=[("pressed", BG_PAGE), ("active", BG_PAGE), ("disabled", BG_SURFACE)],
