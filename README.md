@@ -27,31 +27,17 @@ installer and tick **"tcl/tk and IDLE"**.
 ### First run
 
 The first time the app starts it creates the database file `cleanhome.db` in
-the project root, seeds the service catalogue and the two starter promotions,
-and creates two accounts:
+the project root and seeds the service catalogue and the starter promotions.
 
-| Role     | Email                 | Password        |
-|----------|-----------------------|-----------------|
-| Admin    | `admin@cleanhome.ph`  | printed to the console once |
-| Customer | `customer@cleanhome.ph`| printed to the console once |
+There are no built-in accounts and no default passwords. The app opens on the
+**Create Admin Account** screen so the owner can create the first
+administrator. After that, customers create their own accounts from the
+**Sign Up** page, and an administrator can add more administrators from
+**Customers → Add Admin**.
 
-The passwords are random and are printed **only once**, in the console window
-that starts the app:
-
-```
-================================================================
-CleanHome first-run accounts. These passwords are shown only once.
-================================================================
-  administrator  admin@cleanhome.ph       xR7kQ2mNvB4pZa
-  customer       customer@cleanhome.ph    8dHt3FyWc9LnRs
-================================================================
-```
-
-Copy them down before closing the console. If you lose them, delete
-`cleanhome.db` and start the app again to get a fresh pair.
-
-From the admin account you can create more administrators from
-**Admin → Customers → Add Admin**.
+Every password is hashed with PBKDF2 before it is written to the database; the
+app never stores or logs a plain-text password. If the only administrator is
+locked out, use the reset tool described below.
 
 ### Locked out? Reset the admin password
 
@@ -84,7 +70,7 @@ repeated there.
 
 ```
 cleanhome/
-├─ main.py                  # entry point: logging, database setup, first-run accounts
+├─ main.py                  # entry point: logging, database setup, first-run check
 ├─ config.py                # business rules, company details, paths
 ├─ utils.py                 # formatting helpers (peso, dates, times)
 ├─ theme.py                 # design tokens, fonts, ttk styles, ScrollableFrame
@@ -156,8 +142,9 @@ runs against its own throw-away database file, so your real `cleanhome.db`
 is never touched.
 
 There is a second, manual harness for the interface. It opens a real
-window and presses the buttons — sign-up, sign-in, booking, cancelling,
-rescheduling, the admin status flow, and the three admin dialogs:
+window and presses the buttons: first-run setup, every screen for each role,
+the components, sign-up, sign-in, booking, rescheduling, cancelling, the admin
+status flow, the admin forms, reports, and logout:
 
 ```bash
 python -m cleanhome.tests.ui.harness

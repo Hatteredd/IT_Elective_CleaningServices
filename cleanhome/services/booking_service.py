@@ -11,6 +11,7 @@ from cleanhome.services import (
     PermissionDenied,
     ValidationError,
     catalog_service,
+    require_admin,
 )
 
 STATUS_PENDING = "pending"
@@ -104,7 +105,7 @@ def list_all_bookings(actor: dict[str, Any] | None, status: str | None = None,
                       search: str = "", date_from: date | None = None,
                       date_to: date | None = None) -> list[dict[str, Any]]:
     """Return every booking, for the administration screens."""
-    _require_admin(actor)
+    require_admin(actor)
     clauses: list[str] = []
     params: list[Any] = []
     if status:
@@ -129,9 +130,10 @@ def list_all_bookings(actor: dict[str, Any] | None, status: str | None = None,
     return [_row_to_booking(row) for row in rows]
 
 
-def upcoming_bookings(actor: dict[str, Any] | None, limit: int = 10) -> list[dict[str, Any]]:
+def upcoming_bookings(actor: dict[str, Any] | None,
+                      limit: int = config.UPCOMING_BOOKINGS_LIMIT) -> list[dict[str, Any]]:
     """Return the next scheduled bookings, soonest first."""
-    _require_admin(actor)
+    require_admin(actor)
     rows = db.query(
         f"SELECT {BOOKING_COLUMNS} {_JOIN} "
         "WHERE b.status IN ('pending', 'confirmed', 'in_progress') "
@@ -225,7 +227,7 @@ def create_booking(actor: dict[str, Any], service_id: int, scheduled_at: datetim
     clean_address = (address or "").strip()
     if not clean_address:
         raise ValidationError("Service address is required.", "address")
-    if len(clean_address) > 255:
+    if len(clean_address) > config.MAX_ADDRESS_LENGTH:
         raise ValidationError("Address must be 255 characters or fewer.", "address")
 
     clean_notes = (notes or "").strip()
@@ -272,7 +274,7 @@ def quote(service_id: int, scheduled_at: datetime) -> dict[str, Any]:
 # ── Changing ─────────────────────────────────────────────────────────────────
 def change_status(actor: dict[str, Any], booking_id: int, new_status: str) -> dict[str, Any]:
     """Move a booking to the next status in the lifecycle."""
-    _require_admin(actor)
+    require_admin(actor)
     booking = get_booking(booking_id)
     if booking is None:
         raise ValidationError("That booking no longer exists.")
@@ -317,7 +319,7 @@ def cancel_booking(actor: dict[str, Any], booking_id: int, reason: str = "") -> 
                 "before the scheduled time.")
         clean_reason = (reason or "").strip() or "Cancelled by the customer"
     else:
-        _require_admin(actor)
+        require_admin(actor)
         if booking["status"] in (STATUS_COMPLETED, STATUS_CANCELLED):
             raise ConflictError(
                 f"A {STATUS_LABELS.get(booking['status'], booking['status']).lower()} "
@@ -359,7 +361,7 @@ def reschedule(actor: dict[str, Any], booking_id: int, new_scheduled_at: datetim
                 f"Bookings can only be changed at least {config.CANCEL_CUTOFF_HOURS} hours "
                 "before the scheduled time.")
     else:
-        _require_admin(actor)
+        require_admin(actor)
         if booking["status"] in (STATUS_COMPLETED, STATUS_CANCELLED):
             raise ConflictError(
                 f"A {STATUS_LABELS.get(booking['status'], booking['status']).lower()} "
@@ -377,7 +379,3 @@ def reschedule(actor: dict[str, Any], booking_id: int, new_scheduled_at: datetim
     )
     return get_booking(booking_id) or {}
 
-
-def _require_admin(actor: dict[str, Any] | None) -> None:
-    if not actor or actor.get("role") != "admin":
-        raise PermissionDenied("Only an administrator can do that.")

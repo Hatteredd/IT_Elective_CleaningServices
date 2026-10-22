@@ -8,7 +8,7 @@ from cleanhome.services import ValidationError, auth_service
 from cleanhome.ui import components, templates
 
 
-class Profile(templates.PageTemplate):
+class Profile(templates.FormMixin, templates.PageTemplate):
     """Edit profile details."""
 
     page_name = "Profile"
@@ -55,17 +55,12 @@ class Profile(templates.PageTemplate):
                                    ).pack(anchor="w", pady=(theme.SPACE_SM, 0))
 
     def _save(self) -> None:
-        for field in self._fields.values():
-            field.clear_error()
+        self.clear_form_errors()
         try:
             user = auth_service.update_profile(
                 self.session.user, self.full_name.get(), self.phone.get(), self.address.get())
         except ValidationError as error:
-            field = self._fields.get(error.field or "")
-            if field is not None:
-                field.set_error(str(error))
-            else:
-                self.app.flash(str(error), "error")
+            self.show_field_error(error)
             return
         self.app.session.sign_in(user)
         self.app.flash("Profile updated.", "success")

@@ -30,6 +30,9 @@ MIN_LEAD_TIME_HOURS = 3
 # How far ahead a customer may schedule a cleaning.
 BOOKING_WINDOW_DAYS = 30
 
+# How many days the date pickers offer (the window plus some slack).
+DATE_PICKER_DAYS = 60
+
 # How many days back and forward the report date pickers reach.
 REPORT_WINDOW_DAYS = 30
 
@@ -47,6 +50,25 @@ MAX_NOTES_LENGTH = 300
 MIN_PERCENT_DISCOUNT = 1
 MAX_PERCENT_DISCOUNT = 90
 
+# ── Field limits ──────────────────────────────────────────────────────────────
+MAX_NAME_LENGTH = 120
+MAX_ADDRESS_LENGTH = 255
+MAX_SERVICE_NAME_LENGTH = 100
+
+# How many services the home page shows, and how many bookings the admin
+# dashboard lists under "Upcoming bookings".
+FEATURED_SERVICE_COUNT = 3
+UPCOMING_BOOKINGS_LIMIT = 10
+
+# Minutes in an hour, used to turn the opening and closing hours into times.
+MINUTES_PER_HOUR = 60
+
+# Length of a password made by the command-line reset tool.
+GENERATED_PASSWORD_LENGTH = 14
+
+# How long SQLite waits for a locked database (in milliseconds).
+DB_BUSY_TIMEOUT_MS = 5000
+
 # ── Security ─────────────────────────────────────────────────────────────────
 MAX_FAILED_LOGINS = 5
 LOCKOUT_MINUTES = 5
@@ -59,6 +81,28 @@ WINDOW_MIN_WIDTH = 1000
 WINDOW_MIN_HEIGHT = 650
 WINDOW_DEFAULT_WIDTH = 1180
 WINDOW_DEFAULT_HEIGHT = 760
+
+# ── Seed catalogue ────────────────────────────────────────────────────────────
+# The service catalogue the app starts with: (name, description, price, minutes).
+SEED_SERVICES: tuple[tuple[str, str, float, int], ...] = (
+    ("Standard Home Cleaning", "A complete clean for living rooms, bedrooms, kitchens and bathrooms.", 1299.00, 90),
+    ("Deep Cleaning", "Detailed top-to-bottom clean including buildup, degreasing and sanitising.", 2499.00, 180),
+    ("Move-in/Move-out Cleaning", "Empty-home deep clean ready for handover or a fresh tenant.", 2999.00, 240),
+    ("Kitchen Deep Cleaning", "Degreasing, descaling and polishing for all kitchen surfaces.", 999.00, 90),
+    ("Bathroom Deep Cleaning", "Scrubbing, descaling and sanitising for bathrooms and toilets.", 699.00, 60),
+    ("Sofa Cleaning", "Fabric sofa shampooing and stain treatment.", 799.00, 60),
+    ("Window Deep Wash", "Interior and exterior glass cleaning for a streak-free finish.", 899.00, 90),
+)
+
+# The starter promotions: (title, discount type, value).
+SEED_PROMOTIONS: tuple[tuple[str, str, float], ...] = (
+    ("Welcome 10% Off", "percent", 10.0),
+    ("Save ₱200", "fixed", 200.0),
+)
+
+# How long the starter promotions stay valid (in days).
+PROMO_DEFAULT_DAYS = 30
+SEED_PROMOTION_SPAN_DAYS = 730
 
 # ── Company details (edit these to match your own business) ─────────────────
 COMPANY_NAME = "CleanHome PH"

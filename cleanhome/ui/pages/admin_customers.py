@@ -5,7 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 
 from cleanhome import theme
-from cleanhome.services import ServiceError, ValidationError, auth_service
+from cleanhome.services import ServiceError, auth_service
 from cleanhome.ui import components, templates
 
 
@@ -29,7 +29,7 @@ class AdminCustomers(templates.AdminTemplate):
         self.table = components.DataTable(
             body, columns,
             headings=["ID", "Name", "Email", "Phone", "Bookings", "Status"],
-            widths=[50, 160, 200, 140, 90, 90])
+            widths=theme.CUSTOMERS_TABLE_WIDTHS)
         self.table.pack(fill="both", expand=True)
         self._refresh()
 
@@ -91,26 +91,19 @@ class AdminCustomers(templates.AdminTemplate):
         AddAdminDialog(self, self.session.user, self._refresh)
 
 
-class AddAdminDialog(tk.Toplevel):
+class AddAdminDialog(components.FormDialog):
     """Create another administrator account."""
 
     def __init__(self, parent, actor, on_saved):
-        super().__init__(parent)
-        self.transient(parent)
-        self.grab_set()
-        self.title("Add Admin")
-        self.resizable(False, False)
+        super().__init__(parent, "Add Admin", on_saved, save_label="Create Admin")
         self.actor = actor
-        self.on_saved = on_saved
 
-        frame = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL, pady=theme.SPACE_LG)
-        frame.pack(fill="both", expand=True)
-
-        self.name = components.FormField(frame, "Full name")
+        self.name = components.FormField(self.body, "Full name")
         self.name.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.email = components.FormField(frame, "Email", placeholder="name@cleanhome.ph")
+        self.email = components.FormField(self.body, "Email",
+                                          placeholder="name@cleanhome.ph")
         self.email.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.password = components.FormField(frame, "Password", secret=True)
+        self.password = components.FormField(self.body, "Password", secret=True)
         self.password.pack(fill="x", pady=(0, theme.SPACE_MD))
         self._fields = {
             "full_name": self.name,
@@ -118,33 +111,12 @@ class AddAdminDialog(tk.Toplevel):
             "password": self.password,
         }
 
-        actions = tk.Frame(frame, bg=theme.BG_SURFACE)
-        actions.pack(anchor="e", pady=(theme.SPACE_MD, 0))
-        components.SecondaryButton(actions, "Cancel", command=self.destroy).pack(
-            side="left", padx=(0, theme.SPACE_SM))
-        components.PrimaryButton(actions, "Create Admin", command=self._save).pack(side="left")
-        self.bind("<Escape>", lambda event: self.destroy())
-
-    def _save(self) -> None:
-        for field in (self.name, self.email, self.password):
-            field.clear_error()
+    def _submit(self) -> None:
+        self.clear_form_errors()
         try:
             auth_service.create_admin(self.actor, self.name.get(), self.email.get(),
                                       self.password.get())
-        except ValidationError as error:
-            widget = self._fields.get(error.field or "")
-            if widget is not None:
-                widget.set_error(error.message)
-                return
-            self._flash(error.message)
-            return
         except ServiceError as error:
-            self._flash(str(error))
+            self.show_field_error(error)
             return
-        self.on_saved()
-        self.destroy()
-
-    def _flash(self, message: str) -> None:
-        app = getattr(self.master, "app", None)
-        if app is not None:
-            app.flash(message, "error")
+        self.saved()

@@ -35,3 +35,4 @@ app.log
 
 # Pre-rewrite backup of the original project
 backup_original/
+cleanhome.db

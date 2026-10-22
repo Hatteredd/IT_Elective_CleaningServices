@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import tkinter as tk
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from cleanhome import config, theme, utils
 from cleanhome.services import ServiceError, auth_service, booking_service, catalog_service
@@ -24,7 +24,8 @@ class Book(templates.PageTemplate):
 
         header = templates.page_header(
             body, "Book a Cleaning",
-            "Pick a time between 8:00 AM and 6:00 PM. We need at least 3 hours' notice.")
+            f"Pick a time between {utils.business_hours()}. We need at least "
+            f"{config.MIN_LEAD_TIME_HOURS} hours' notice.")
         header.pack(fill="x")
 
         form = templates.card(body)
@@ -37,7 +38,7 @@ class Book(templates.PageTemplate):
         self.service_map = {service["name"]: service["id"] for service in services}
         self.service_box = components.Dropdown(
             inner, [service["name"] for service in services],
-            textvariable=self.service_var, width=40,
+            textvariable=self.service_var, width=theme.DROPDOWN_SERVICE,
             on_change=lambda value: self._update_quote())
         self.service_box.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
         if service_id:
@@ -54,12 +55,12 @@ class Book(templates.PageTemplate):
 
         components.CaptionLabel(inner, text="Time", surface=True).pack(anchor="w")
         self.time_var = tk.StringVar()
-        self.time_box = components.Dropdown(inner, [], textvariable=self.time_var, width=24)
+        self.time_box = components.Dropdown(inner, [], textvariable=self.time_var, width=theme.DROPDOWN_WIDTH)
         self.time_box.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
         self.slots: list[datetime] = []
 
         components.CaptionLabel(inner, text="Service address", surface=True).pack(anchor="w")
-        self.address = components.FormField(inner, "Service address", width=60)
+        self.address = components.FormField(inner, "Service address", width=theme.FIELD_WIDTH_WIDE)
         self.address.pack(fill="x", pady=(theme.SPACE_XS, 0))
         if self.session.user and self.session.user.get("address"):
             self.address.set(self.session.user["address"])
@@ -69,7 +70,7 @@ class Book(templates.PageTemplate):
         self.save_address.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
 
         components.CaptionLabel(inner, text="Notes (optional)", surface=True).pack(anchor="w")
-        self.notes = components.FormField(inner, "Notes", width=60)
+        self.notes = components.FormField(inner, "Notes", width=theme.FIELD_WIDTH_WIDE)
         self.notes.pack(fill="x", pady=(theme.SPACE_XS, theme.SPACE_MD))
         self.notes.bind_return(self._submit)
         self.address.bind_return(self._submit)
@@ -81,7 +82,7 @@ class Book(templates.PageTemplate):
         quote_inner = templates.card_body(quote)
         components.SubheadingLabel(quote_inner, text="Booking summary", surface=True).pack(anchor="w")
         self.summary_label = components.BodyLabel(quote_inner, text="—", surface=True,
-                                                  wraplength=700, justify="left")
+                                                  wraplength=theme.WRAP_SECTION, justify="left")
         self.summary_label.pack(anchor="w", pady=(theme.SPACE_XS, 0))
         components.SubheadingLabel(quote_inner, text="Price breakdown", surface=True).pack(
             anchor="w", pady=(theme.SPACE_MD, 0))
@@ -90,7 +91,7 @@ class Book(templates.PageTemplate):
         self.total_label = components.PriceLabel(quote_inner, text="", surface=True)
         self.total_label.pack(anchor="w", pady=(theme.SPACE_XS, 0))
 
-        self.error_label = components.BodyLabel(body, text="", wraplength=900, justify="left", surface=False)
+        self.error_label = components.BodyLabel(body, text="", wraplength=theme.WRAP_FULL, justify="left", surface=False)
         self.error_label.pack(anchor="w", pady=(theme.SPACE_MD, 0))
         self.error_label.pack_forget()
 
@@ -142,7 +143,7 @@ class Book(templates.PageTemplate):
             self.total_label.configure(text="")
             return
         day = day or date.today()
-        when = datetime.combine(day, datetime.strptime("09:00", "%H:%M").time())
+        when = datetime.combine(day, time(config.BUSINESS_OPEN_HOUR, 0))
         q = booking_service.quote(service["id"], when)
         discount = q["discount"]
         total = q["total"]

@@ -6,8 +6,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from cleanhome import db, utils
-from cleanhome.services import ConflictError, PermissionDenied, ValidationError
+from cleanhome import config, db, utils
+from cleanhome.services import ConflictError, ValidationError, require_admin
 
 SERVICE_COLUMNS = "id, name, description, price, duration_mins, is_active, created_at"
 PROMOTION_COLUMNS = (
@@ -40,7 +40,7 @@ def get_service(service_id: int) -> dict[str, Any] | None:
     return _service_row(row) if row else None
 
 
-def featured_services(limit: int = 3) -> list[dict[str, Any]]:
+def featured_services(limit: int = config.FEATURED_SERVICE_COUNT) -> list[dict[str, Any]]:
     """Return the services shown on the home page."""
     rows = db.query(
         f"SELECT {SERVICE_COLUMNS} FROM services WHERE is_active = 1 "
@@ -53,7 +53,7 @@ def featured_services(limit: int = 3) -> list[dict[str, Any]]:
 def create_service(actor: dict[str, Any], name: str, description: str,
                    price: float, duration_mins: int) -> dict[str, Any]:
     """Add a service to the catalogue."""
-    _require_admin(actor)
+    require_admin(actor)
     clean = _validate_service_fields(name, description, price, duration_mins)
     if db.query_one("SELECT id FROM services WHERE name = ? COLLATE NOCASE", (clean["name"],)):
         raise ConflictError("A service with that name already exists.")
@@ -67,7 +67,7 @@ def create_service(actor: dict[str, Any], name: str, description: str,
 def update_service(actor: dict[str, Any], service_id: int, name: str,
                    description: str, price: float, duration_mins: int) -> dict[str, Any]:
     """Edit an existing service."""
-    _require_admin(actor)
+    require_admin(actor)
     clean = _validate_service_fields(name, description, price, duration_mins)
     clash = db.query_one(
         "SELECT id FROM services WHERE name = ? COLLATE NOCASE AND id != ?",
@@ -85,7 +85,7 @@ def update_service(actor: dict[str, Any], service_id: int, name: str,
 
 def archive_service(actor: dict[str, Any], service_id: int) -> dict[str, Any]:
     """Deactivate a service. Services with bookings are never deleted."""
-    _require_admin(actor)
+    require_admin(actor)
     service = get_service(service_id)
     if service is None:
         raise ValidationError("That service no longer exists.")
@@ -95,20 +95,19 @@ def archive_service(actor: dict[str, Any], service_id: int) -> dict[str, Any]:
 
 def restore_service(actor: dict[str, Any], service_id: int) -> dict[str, Any]:
     """Reactivate an archived service."""
-    _require_admin(actor)
+    require_admin(actor)
     db.execute("UPDATE services SET is_active = 1 WHERE id = ?", (service_id,))
     return get_service(service_id) or {}
 
 
 def _validate_service_fields(name: str, description: str, price: float,
                               duration_mins: int) -> dict[str, Any]:
-    from cleanhome import config
-
     clean_name = (name or "").strip()
     if not clean_name:
         raise ValidationError("Service name is required.", "name")
-    if len(clean_name) > 100:
-        raise ValidationError("Service name must be 100 characters or fewer.", "name")
+    if len(clean_name) > config.MAX_SERVICE_NAME_LENGTH:
+        raise ValidationError(
+            f"Service name must be {config.MAX_SERVICE_NAME_LENGTH} characters or fewer.", "name")
     try:
         clean_price = utils.parse_decimal(price)
     except ValueError:
@@ -162,7 +161,7 @@ def create_promotion(actor: dict[str, Any], title: str, service_id: int | None,
                      discount_type: str, discount_value: float,
                      start_date: datetime, end_date: datetime) -> dict[str, Any]:
     """Create a promotion."""
-    _require_admin(actor)
+    require_admin(actor)
     clean = _validate_promotion_fields(title, discount_type, discount_value, start_date,
                                        end_date, service_id)
     cursor = db.execute(
@@ -178,7 +177,7 @@ def update_promotion(actor: dict[str, Any], promotion_id: int, title: str,
                      service_id: int | None, discount_type: str, discount_value: float,
                      start_date: datetime, end_date: datetime) -> dict[str, Any]:
     """Edit a promotion."""
-    _require_admin(actor)
+    require_admin(actor)
     clean = _validate_promotion_fields(title, discount_type, discount_value, start_date,
                                        end_date, service_id)
     db.execute(
@@ -192,7 +191,7 @@ def update_promotion(actor: dict[str, Any], promotion_id: int, title: str,
 
 def end_promotion(actor: dict[str, Any], promotion_id: int) -> dict[str, Any]:
     """Deactivate a promotion so it stops applying."""
-    _require_admin(actor)
+    require_admin(actor)
     db.execute("UPDATE promotions SET is_active = 0 WHERE id = ?", (promotion_id,))
     return get_promotion(promotion_id) or {}
 
@@ -200,8 +199,6 @@ def end_promotion(actor: dict[str, Any], promotion_id: int) -> dict[str, Any]:
 def _validate_promotion_fields(title: str, discount_type: str, discount_value: float,
                                start_date: datetime, end_date: datetime,
                                service_id: int | None = None) -> dict[str, Any]:
-    from cleanhome import config
-
     clean_title = (title or "").strip()
     if not clean_title:
         raise ValidationError("Promotion title is required.", "title")
@@ -276,7 +273,3 @@ def promo_discount(promo: dict[str, Any], price: Decimal) -> Decimal:
         value = price
     return value if value > 0 else Decimal("0")
 
-
-def _require_admin(actor: dict[str, Any] | None) -> None:
-    if not actor or actor.get("role") != "admin":
-        raise PermissionDenied("Only an administrator can do that.")

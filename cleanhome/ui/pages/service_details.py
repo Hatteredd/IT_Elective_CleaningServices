@@ -40,7 +40,8 @@ class ServiceDetails(templates.PageTemplate):
         components.CaptionLabel(inner, text=f"{service['duration_mins']} minutes",
                                  surface=True).pack(anchor="w")
         if service.get("description"):
-            components.BodyLabel(inner, text=service["description"], wraplength=760,
+            components.BodyLabel(inner, text=service["description"],
+                                 wraplength=theme.WRAP_SECTION,
                                  justify="left", surface=True).pack(anchor="w",
                                                                   pady=(theme.SPACE_MD, 0))
 
@@ -50,10 +51,8 @@ class ServiceDetails(templates.PageTemplate):
             promo_row.pack(anchor="w", fill="x", pady=(0, theme.SPACE_MD))
             components.SubheadingLabel(promo_row, text=promo["title"], surface=True).pack(
                 side="left")
-            discount = (f"{promo['discount_value']:,.0f}% off"
-                        if promo["discount_type"] == "percent"
-                        else f"{utils.format_peso(promo['discount_value'])} off")
-            components.BodyLabel(promo_row, text=discount, surface=True).pack(
+            components.BodyLabel(promo_row, text=utils.format_discount(promo),
+                                 surface=True).pack(
                 side="left", padx=(theme.SPACE_SM, 0))
             components.CaptionLabel(
                 promo_row,

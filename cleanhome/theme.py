@@ -34,7 +34,12 @@ TOGGLE_ON = PRIMARY      # a switch that is on
 TOGGLE_OFF = "#D1D5DB"   # a switch that is off
 TOGGLE_THUMB = "#FFFFFF"  # the knob of a switch
 CHECK_MARK = PRIMARY     # the tick inside a checked box
-INPUT_BG = "#F9FAFB"     # the light fill of a text input
+BG_ROW_ALT = "#FAFAFB"   # every other row of a table
+PRIMARY_DISABLED = "#B9C6D4"
+PRIMARY_DISABLED_TEXT = "#F0F3F6"
+DANGER_HOVER = "#C43B40"
+DANGER_DISABLED = "#EFC0C2"
+DANGER_DISABLED_TEXT = "#FDF3F3"
 
 # ── Spacing (16px grid: multiples of 4 and 8 only) ───────────────────────────
 SPACE_XS, SPACE_SM, SPACE_MD, SPACE_LG, SPACE_XL = 4, 8, 16, 24, 32
@@ -54,12 +59,93 @@ TOGGLE_WIDTH = 40
 TOGGLE_HEIGHT = 22
 CHECK_SIZE = 18          # the square box of a check box
 
+# ── Layout ────────────────────────────────────────────────────────────────────
+# How many cards sit side by side in a grid.
+CARD_COLUMNS = 3
+DASHBOARD_COLUMNS = 6    # the stat cards on the admin dashboard
+REPORT_COLUMNS = 4       # the stat cards on the report screen
+
+# Column widths of the label/value pairs (in characters).
+LABEL_WIDTH = 16
+LABEL_WIDTH_NARROW = 14
+
+# How wide a block of text may grow before it wraps (in pixels).
+WRAP_NARROW = 280        # a line inside a three-column card
+WRAP_COLUMN = 300        # a line inside a card column
+WRAP_FORM = 420          # the setup screen intro
+WRAP_HERO = 520          # the home page hero paragraph
+WRAP_DIALOG = 380        # a dialog paragraph
+WRAP_CONTACT = 600       # the contact detail column
+WRAP_SECTION = 760       # a section paragraph
+WRAP_FULL = 900          # a full-width paragraph
+WRAP_CARD = 800          # a line inside a booking card
+
+# Input and dropdown widths (in characters).
+FIELD_WIDTH = 40
+FIELD_WIDTH_WIDE = 60
+FIELD_WIDTH_SHORT = 14
+FIELD_WIDTH_DATE = 26
+FIELD_WIDTH_DIALOG = 44
+DROPDOWN_WIDTH = 24
+DROPDOWN_SERVICE = 40
+DROPDOWN_STATUS = 16
+DROPDOWN_SORT = 22
+BUTTON_WIDTH_TOGGLE = 6
+SEARCH_WIDTH = 320
+
+# The height of a table when it is first drawn (in rows).
+DATA_TABLE_HEIGHT = 12
+
+# How long a toast stays on screen (in milliseconds).
+TOAST_DURATION_MS = 3500
+
+# How far the promotion form can reach back and forward (in days).
+PROMO_DATE_SPAN_DAYS = 730
+PROMO_DATE_SPAN_OFFSET = -365
+DATE_SPAN_YEAR = 365
+
 # ── Fonts ────────────────────────────────────────────────────────────────────
 # The reference design uses Geist Sans / Inter, which are not installed by
 # default. Detect what this machine actually has and fall back in order.
 FONT_CANDIDATES = ("Inter", "Geist", "Segoe UI", "Helvetica")
 FONT_FAMILY = "Segoe UI"
 FONT_AVAILABLE: list[str] = []
+
+# Font sizes that are not part of the type scale.
+BRAND_FONT_SIZE = 13
+BRAND_BOLD_SIZE = 15
+HERO_FONT_SIZE = 28
+PROMO_PRICE_FONT_SIZE = 22
+AVATAR_INITIAL_FONT_SIZE = 18
+OVERSTRIKE_FONT_SIZE = 10
+CLEAR_ICON_FONT_SIZE = 12
+
+# ── Canvas drawing ───────────────────────────────────────────────────────────
+STROKE_WIDTH = 2         # the width of a drawn line
+ICON_EDGE_INSET = 2      # how far a drawn shape stays from the tile edge
+ICON_DOT_RADIUS = 3      # the radius of the dot in the sparkle icon
+ICON_ARM_LENGTH = 6      # how far the arms of the sparkle reach
+ICON_RING_INSET = 6      # the inset of the clock face
+ICON_HAND_LONG = 8       # the long hand of the clock
+ICON_HAND_SHORT = 6      # the short hand of the clock
+ICON_SHIELD_INSET = 6    # the inset of the shield outline
+ICON_SHIELD_SHOULDER = 10  # the width of the top of the shield
+# The three points of the tick inside the shield, relative to its centre.
+ICON_SHIELD_TICK = ((-4, 0), (-1, 3), (4, -2))
+TOGGLE_RADIUS = 11       # the rounded end of the switch
+TOGGLE_INSET = 2         # how far the knob sits from the end of the track
+CHECK_TICK = ((4, 9), (7, 12), (14, 5))  # the three points of the tick
+AVATAR_SIZE = 56         # the square avatar on the profile card
+AVATAR_INSET = 2         # the gap between the avatar and its ring
+BORDER_WIDTH = 1         # the 1px border of a card or a table cell
+
+# ── Table column widths (in pixels) ───────────────────────────────────────────
+BOOKINGS_TABLE_WIDTHS = (40, 110, 150, 110, 130, 140, 170, 80, 70)
+SERVICES_TABLE_WIDTHS = (50, 280, 100, 100, 90)
+PROMOTIONS_TABLE_WIDTHS = (50, 160, 80, 80, 160, 130, 130, 80)
+CUSTOMERS_TABLE_WIDTHS = (50, 160, 200, 140, 90, 90)
+DASHBOARD_TABLE_WIDTHS = (60, 160, 160, 180, 110, 100)
+REPORT_TABLE_WIDTHS = (320, 120, 140)
 
 
 def detect_fonts() -> str:
@@ -105,16 +191,8 @@ def configure_style(root: tk.Misc) -> None:
 
     style.configure(".", background=BG_PAGE, foreground=TEXT, font=font("BODY"))
     style.configure("TFrame", background=BG_PAGE)
-    style.configure("Surface.TFrame", background=BG_SURFACE)
-    style.configure("Sidebar.TFrame", background=BG_SURFACE)
     style.configure("TLabel", background=BG_PAGE, foreground=TEXT, font=font("BODY"))
-    style.configure("Surface.TLabel", background=BG_SURFACE, foreground=TEXT, font=font("BODY"))
-    style.configure("H1.TLabel", font=font("H1"), foreground=TEXT)
-    style.configure("H2.TLabel", font=font("H2"), foreground=TEXT)
-    style.configure("Body.TLabel", font=font("BODY"), foreground=TEXT_BODY)
     style.configure("Caption.TLabel", font=font("CAPTION"), foreground=TEXT_MUTED)
-    style.configure("Surface.Caption.TLabel", background=BG_SURFACE, font=font("CAPTION"), foreground=TEXT_MUTED)
-    style.configure("Price.TLabel", background=BG_SURFACE, font=font("PRICE"), foreground=PRIMARY)
 
     style.configure("TEntry", fieldbackground=BG_SURFACE, bordercolor=BORDER,
                     lightcolor=BORDER, darkcolor=BORDER, padding=(10, 8),
@@ -135,10 +213,10 @@ def configure_style(root: tk.Misc) -> None:
               darkcolor=[("focus", BG_SURFACE)])
 
     style.configure("Primary.TButton", padding=(18, 10), font=font("BODY"),
-                    background=PRIMARY, foreground="#FFFFFF", borderwidth=0, focusthickness=0)
+                    background=PRIMARY, foreground=TEXT_ON_ACCENT, borderwidth=0, focusthickness=0)
     style.map("Primary.TButton",
-              background=[("pressed", PRIMARY_HOVER), ("active", PRIMARY_HOVER), ("disabled", "#B9C6D4")],
-              foreground=[("disabled", "#F0F3F6")])
+              background=[("pressed", PRIMARY_HOVER), ("active", PRIMARY_HOVER), ("disabled", PRIMARY_DISABLED)],
+              foreground=[("disabled", PRIMARY_DISABLED_TEXT)])
 
     style.configure("Secondary.TButton", padding=(18, 10), font=font("BODY"),
                     background=BG_SURFACE, foreground=TEXT, borderwidth=1)
@@ -149,10 +227,10 @@ def configure_style(root: tk.Misc) -> None:
               lightcolor=[("!disabled", BORDER)], darkcolor=[("!disabled", BORDER)])
 
     style.configure("Danger.TButton", padding=(18, 10), font=font("BODY"),
-                    background=DANGER, foreground="#FFFFFF", borderwidth=0, focusthickness=0)
+                    background=DANGER, foreground=TEXT_ON_ACCENT, borderwidth=0, focusthickness=0)
     style.map("Danger.TButton",
-              background=[("pressed", "#C43B40"), ("active", "#C43B40"), ("disabled", "#EFC0C2")],
-              foreground=[("disabled", "#FDF3F3")])
+              background=[("pressed", DANGER_HOVER), ("active", DANGER_HOVER), ("disabled", DANGER_DISABLED)],
+              foreground=[("disabled", DANGER_DISABLED_TEXT)])
 
     style.configure("TCombobox", fieldbackground=BG_SURFACE, background=BG_SURFACE,
                     bordercolor=BORDER, lightcolor=BORDER, darkcolor=BORDER,
@@ -200,24 +278,8 @@ def badge_style(status: str) -> tuple[str, str]:
 
 
 # ── Widget factories ─────────────────────────────────────────────────────────
-def make_card(parent: tk.Misc, **kwargs) -> tk.Frame:
-    """Create a card with a 1px border and a fake shadow edge."""
-    outer = tk.Frame(parent, bg=SHADOW_EDGE, **kwargs)
-    inner = tk.Frame(outer, bg=BG_SURFACE, highlightbackground=BORDER,
-                     highlightthickness=1, bd=0)
-    inner.pack(fill="both", expand=True, padx=(0, 1), pady=(0, 1))
-    outer.inner = inner
-    return outer
-
-
-def make_badge(parent: tk.Misc, text: str, status: str) -> ttk.Label:
-    """Return a status pill."""
-    style, _ = badge_style(status)
-    return ttk.Label(parent, text=text, style=f"{style}.TLabel")
-
-
 def make_treeview_with_scrollbar(parent: tk.Misc, columns, headings=None,
-                                 widths=None, height=12, **kwargs):
+                                 widths=None, height=DATA_TABLE_HEIGHT, **kwargs):
     """Create a Treeview with an attached vertical scrollbar."""
     container = ttk.Frame(parent, style="TFrame")
     tree = ttk.Treeview(container, columns=columns, show="headings",
@@ -239,7 +301,7 @@ def make_treeview_with_scrollbar(parent: tk.Misc, columns, headings=None,
             tree.column(col, width=width, anchor="w")
 
     tree.tag_configure("even", background=BG_SURFACE)
-    tree.tag_configure("odd", background="#FAFAFB")
+    tree.tag_configure("odd", background=BG_ROW_ALT)
     return container, tree
 
 

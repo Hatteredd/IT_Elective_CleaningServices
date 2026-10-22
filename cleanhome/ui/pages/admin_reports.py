@@ -10,9 +10,6 @@ from cleanhome import config, theme, utils
 from cleanhome.services import ServiceError, report_service
 from cleanhome.ui import components, templates
 
-REPORT_WINDOW_DAYS = config.REPORT_WINDOW_DAYS
-
-
 class AdminReports(templates.AdminTemplate):
     page_name = "Reports"
 
@@ -27,13 +24,13 @@ class AdminReports(templates.AdminTemplate):
         controls = tk.Frame(body, bg=theme.BG_PAGE)
         controls.pack(fill="x", pady=(theme.SPACE_LG, theme.SPACE_MD))
         components.CaptionLabel(controls, text="Start", surface=False).pack(side="left")
-        self.start = components.DateCombo(controls, days=REPORT_WINDOW_DAYS + 1,
-                                           start_offset=-REPORT_WINDOW_DAYS)
-        self.start.set_date(date.today() - timedelta(days=REPORT_WINDOW_DAYS))
+        self.start = components.DateCombo(controls, days=config.REPORT_WINDOW_DAYS + 1,
+                                           start_offset=-config.REPORT_WINDOW_DAYS)
+        self.start.set_date(date.today() - timedelta(days=config.REPORT_WINDOW_DAYS))
         self.start.pack(side="left", padx=(theme.SPACE_XS, theme.SPACE_MD))
         components.CaptionLabel(controls, text="End", surface=False).pack(side="left")
-        self.end = components.DateCombo(controls, days=REPORT_WINDOW_DAYS + 1,
-                                         start_offset=-REPORT_WINDOW_DAYS)
+        self.end = components.DateCombo(controls, days=config.REPORT_WINDOW_DAYS + 1,
+                                         start_offset=-config.REPORT_WINDOW_DAYS)
         self.end.set_date(date.today())
         self.end.pack(side="left", padx=(theme.SPACE_XS, theme.SPACE_MD))
         components.SecondaryButton(controls, "Run Report",
@@ -71,7 +68,7 @@ class AdminReports(templates.AdminTemplate):
         self._range = (s, e)
         for child in self.summary.winfo_children():
             child.destroy()
-        for column in range(4):
+        for column in range(theme.REPORT_COLUMNS):
             self.summary.grid_columnconfigure(column, weight=1)
         items = (
             ("Total bookings", report["total_bookings"], ""),
@@ -91,7 +88,7 @@ class AdminReports(templates.AdminTemplate):
         columns = ("service", "bookings", "revenue")
         table = components.DataTable(self.table_frame, columns,
                                      headings=["Service", "Bookings", "Revenue"],
-                                     widths=[320, 120, 140])
+                                     widths=theme.REPORT_TABLE_WIDTHS)
         table.pack(fill="x")
         for row in report["revenue_per_service"]:
             table.add_row((

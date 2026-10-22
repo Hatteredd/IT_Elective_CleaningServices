@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
-from cleanhome import theme
+from cleanhome import theme, utils
 from cleanhome.services import ServiceError, catalog_service
 from cleanhome.ui import components, templates
 
@@ -22,7 +22,7 @@ class AdminServices(templates.AdminTemplate):
         columns = ("id", "name", "price", "duration", "status")
         self.table = components.DataTable(body, columns,
                                           headings=["ID", "Name", "Price", "Duration", "Status"],
-                                          widths=[50, 280, 100, 100, 90])
+                                          widths=theme.SERVICES_TABLE_WIDTHS)
         self.table.pack(fill="both", expand=True, pady=(theme.SPACE_LG, 0))
         self._refresh()
 
@@ -100,7 +100,7 @@ class AdminServices(templates.AdminTemplate):
             self.table.add_row((
                 service["id"],
                 service["name"],
-                f"₱{service['price']:,.2f}",
+                utils.format_peso(service["price"]),
                 f"{service['duration_mins']} mins",
                 "Active" if service["is_active"] else "Archived",
             ), index=index)
@@ -123,30 +123,29 @@ class AdminServices(templates.AdminTemplate):
         ServiceForm(self, self.session.user, service, self._refresh)
 
 
-class ServiceForm(tk.Toplevel):
+class ServiceForm(components.FormDialog):
     """Modal form to add or edit a service."""
 
     def __init__(self, parent, actor, service, on_saved):
-        super().__init__(parent)
-        self.transient(parent)
-        self.grab_set()
-        self.title("Add Service" if service is None else "Edit Service")
-        self.resizable(False, False)
+        super().__init__(parent, "Add Service" if service is None else "Edit Service",
+                         on_saved)
         self.actor = actor
         self.service = service
-        self.on_saved = on_saved
 
-        frame = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL, pady=theme.SPACE_LG)
-        frame.pack(fill="both", expand=True)
-
-        self.name = components.FormField(frame, "Name")
+        self.name = components.FormField(self.body, "Name")
         self.name.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.description = components.FormField(frame, "Description")
+        self.description = components.FormField(self.body, "Description")
         self.description.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.price = components.FormField(frame, "Price (₱)")
+        self.price = components.FormField(self.body, "Price (₱)")
         self.price.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.duration = components.FormField(frame, "Duration (minutes)")
+        self.duration = components.FormField(self.body, "Duration (minutes)")
         self.duration.pack(fill="x", pady=(0, theme.SPACE_MD))
+        self._fields = {
+            "name": self.name,
+            "description": self.description,
+            "price": self.price,
+            "duration_mins": self.duration,
+        }
 
         if service:
             self.name.set(service["name"])
@@ -154,15 +153,8 @@ class ServiceForm(tk.Toplevel):
             self.price.set(str(service["price"]))
             self.duration.set(str(service["duration_mins"]))
 
-        actions = tk.Frame(frame, bg=theme.BG_SURFACE)
-        actions.pack(anchor="e", pady=(theme.SPACE_MD, 0))
-        components.SecondaryButton(actions, "Cancel", command=self.destroy).pack(
-            side="left", padx=(0, theme.SPACE_SM))
-        components.PrimaryButton(actions, "Save", command=self._save).pack(side="left")
-
-    def _save(self) -> None:
-        for field in (self.name, self.description, self.price, self.duration):
-            field.clear_error()
+    def _submit(self) -> None:
+        self.clear_form_errors()
         try:
             price = float(self.price.get())
         except ValueError:
@@ -182,16 +174,6 @@ class ServiceForm(tk.Toplevel):
                     self.actor, self.service["id"], self.name.get(),
                     self.description.get(), price, duration)
         except ServiceError as error:
-            field = getattr(self, error.field, None) if error.field else None
-            if field is not None and hasattr(field, "set_error"):
-                field.set_error(str(error))
-            else:
-                self._flash(str(error))
+            self.show_field_error(error)
             return
-        self.on_saved()
-        self.destroy()
-
-    def _flash(self, message: str) -> None:
-        app = getattr(self.master, "app", None)
-        if app is not None:
-            app.flash(message, "error")
+        self.saved()

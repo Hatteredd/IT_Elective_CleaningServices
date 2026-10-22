@@ -8,12 +8,66 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from cleanhome import config, db, security
-from cleanhome.services import AuthError, ConflictError, PermissionDenied, ValidationError
+from cleanhome.services import (
+    AuthError,
+    ConflictError,
+    PermissionDenied,
+    ServiceError,
+    ValidationError,
+    require_admin,
+)
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
 PHONE_PATTERN = re.compile(r"^(09\d{9}|\+639\d{9})$")
 
 GENERIC_LOGIN_ERROR = "Incorrect email or password."
+
+
+# ── Shared validation ─────────────────────────────────────────────────────────
+def _clean_full_name(full_name: str) -> str:
+    """Return a trimmed full name, or raise when it is missing or too long."""
+    clean = (full_name or "").strip()
+    if not clean:
+        raise ValidationError("Full name is required.", "full_name")
+    if len(clean) > config.MAX_NAME_LENGTH:
+        raise ValidationError(
+            f"Full name must be {config.MAX_NAME_LENGTH} characters or fewer.", "full_name"
+        )
+    return clean
+
+
+def _clean_email(email: str, *, taken: type[ServiceError] = ValidationError) -> str:
+    """Return a trimmed lowercase email, or raise when it is missing or taken."""
+    clean = (email or "").strip().lower()
+    if not clean:
+        raise ValidationError("Email is required.", "email")
+    if not EMAIL_PATTERN.match(clean):
+        raise ValidationError("Enter a valid email address.", "email")
+    if db.query_one("SELECT id FROM users WHERE email = ?", (clean,)):
+        message = "An account with this email already exists."
+        if taken is ValidationError:
+            raise ValidationError(message, "email")
+        raise taken(message)
+    return clean
+
+
+def _clean_phone(phone: str) -> str:
+    """Return a trimmed phone number, or raise when it is not a PH mobile."""
+    clean = (phone or "").strip()
+    if clean and not PHONE_PATTERN.match(clean):
+        raise ValidationError("Enter a valid PH mobile number (09XXXXXXXXX).", "phone")
+    return clean
+
+
+def _check_password(password: str, confirm_password: str) -> None:
+    """Raise when the password is missing, too weak, or does not match."""
+    if not password:
+        raise ValidationError("Password is required.", "password")
+    problems = security.password_problems(password)
+    if problems:
+        raise ValidationError(problems[0], "password")
+    if password != confirm_password:
+        raise ValidationError("Passwords do not match.", "confirm_password")
 
 
 # ── Read helpers ─────────────────────────────────────────────────────────────
@@ -56,31 +110,10 @@ def create_first_admin(full_name: str, email: str, phone: str, password: str,
     if admin_exists():
         raise ConflictError("An administrator account already exists.")
 
-    clean_name = (full_name or "").strip()
-    if not clean_name:
-        raise ValidationError("Full name is required.", "full_name")
-    if len(clean_name) > 120:
-        raise ValidationError("Full name must be 120 characters or fewer.", "full_name")
-
-    clean_email = (email or "").strip().lower()
-    if not clean_email:
-        raise ValidationError("Email is required.", "email")
-    if not EMAIL_PATTERN.match(clean_email):
-        raise ValidationError("Enter a valid email address.", "email")
-    if db.query_one("SELECT id FROM users WHERE email = ?", (clean_email,)):
-        raise ValidationError("An account with this email already exists.", "email")
-
-    clean_phone = (phone or "").strip()
-    if clean_phone and not PHONE_PATTERN.match(clean_phone):
-        raise ValidationError("Enter a valid PH mobile number (09XXXXXXXXX).", "phone")
-
-    if not password:
-        raise ValidationError("Password is required.", "password")
-    problems = security.password_problems(password)
-    if problems:
-        raise ValidationError(problems[0], "password")
-    if password != confirm_password:
-        raise ValidationError("Passwords do not match.", "confirm_password")
+    clean_name = _clean_full_name(full_name)
+    clean_email = _clean_email(email)
+    clean_phone = _clean_phone(phone)
+    _check_password(password, confirm_password)
 
     salt, digest = security.hash_password(password)
     cursor = db.execute(
@@ -98,31 +131,10 @@ def register(full_name: str, email: str, phone: str, password: str,
 
     Sign-up can never create an administrator: the role is fixed here.
     """
-    clean_name = (full_name or "").strip()
-    if not clean_name:
-        raise ValidationError("Full name is required.", "full_name")
-    if len(clean_name) > 120:
-        raise ValidationError("Full name must be 120 characters or fewer.", "full_name")
-
-    clean_email = (email or "").strip().lower()
-    if not clean_email:
-        raise ValidationError("Email is required.", "email")
-    if not EMAIL_PATTERN.match(clean_email):
-        raise ValidationError("Enter a valid email address.", "email")
-    if db.query_one("SELECT id FROM users WHERE email = ?", (clean_email,)):
-        raise ValidationError("An account with this email already exists.", "email")
-
-    clean_phone = (phone or "").strip()
-    if clean_phone and not PHONE_PATTERN.match(clean_phone):
-        raise ValidationError("Enter a valid PH mobile number (09XXXXXXXXX).", "phone")
-
-    if not password:
-        raise ValidationError("Password is required.", "password")
-    problems = security.password_problems(password)
-    if problems:
-        raise ValidationError(problems[0], "password")
-    if password != confirm_password:
-        raise ValidationError("Passwords do not match.", "confirm_password")
+    clean_name = _clean_full_name(full_name)
+    clean_email = _clean_email(email)
+    clean_phone = _clean_phone(phone)
+    _check_password(password, confirm_password)
 
     salt, digest = security.hash_password(password)
     cursor = db.execute(
@@ -170,7 +182,8 @@ def _is_locked(user: dict[str, Any]) -> bool:
 
 def _lockout_message(user: dict[str, Any]) -> str:
     locked_until = _parse_datetime(user.get("locked_until")) or datetime.now()
-    minutes = max(1, math.ceil((locked_until - datetime.now()).total_seconds() / 60))
+    seconds = (locked_until - datetime.now()).total_seconds()
+    minutes = max(1, math.ceil(seconds / config.MINUTES_PER_HOUR))
     return f"Too many failed attempts. Try again in {minutes} minute(s)."
 
 
@@ -235,17 +248,13 @@ def update_profile(actor: dict[str, Any], full_name: str, phone: str,
     """Update the signed-in user's own profile."""
     if not actor:
         raise AuthError("You must be signed in to edit your profile.")
-    clean_name = (full_name or "").strip()
-    if not clean_name:
-        raise ValidationError("Full name is required.", "full_name")
-    if len(clean_name) > 120:
-        raise ValidationError("Full name must be 120 characters or fewer.", "full_name")
-    clean_phone = (phone or "").strip()
-    if clean_phone and not PHONE_PATTERN.match(clean_phone):
-        raise ValidationError("Enter a valid PH mobile number (09XXXXXXXXX).", "phone")
+    clean_name = _clean_full_name(full_name)
+    clean_phone = _clean_phone(phone)
     clean_address = (address or "").strip()
-    if len(clean_address) > 255:
-        raise ValidationError("Address must be 255 characters or fewer.", "address")
+    if len(clean_address) > config.MAX_ADDRESS_LENGTH:
+        raise ValidationError(
+            f"Address must be {config.MAX_ADDRESS_LENGTH} characters or fewer.", "address"
+        )
     db.execute(
         "UPDATE users SET full_name = ?, phone = ?, address = ? WHERE id = ?",
         (clean_name, clean_phone, clean_address, actor["id"]),
@@ -256,7 +265,7 @@ def update_profile(actor: dict[str, Any], full_name: str, phone: str,
 # ── Administration ───────────────────────────────────────────────────────────
 def list_customers(actor: dict[str, Any], search: str = "") -> list[dict[str, Any]]:
     """List customer accounts with their booking counts."""
-    _require_admin(actor)
+    require_admin(actor)
     term = (search or "").strip()
     if term:
         like = f"%{term}%"
@@ -284,7 +293,7 @@ def list_customers(actor: dict[str, Any], search: str = "") -> list[dict[str, An
 
 def set_user_active(actor: dict[str, Any], user_id: int, active: bool) -> dict[str, Any]:
     """Deactivate or reactivate a customer account."""
-    _require_admin(actor)
+    require_admin(actor)
     if int(actor["id"]) == int(user_id):
         raise ConflictError("You cannot deactivate your own account.")
     target = db.query_one("SELECT id, role FROM users WHERE id = ?", (user_id,))
@@ -299,15 +308,9 @@ def set_user_active(actor: dict[str, Any], user_id: int, active: bool) -> dict[s
 def create_admin(actor: dict[str, Any], full_name: str, email: str,
                  password: str) -> dict[str, Any]:
     """Create another administrator account."""
-    _require_admin(actor)
-    clean_name = (full_name or "").strip()
-    if not clean_name:
-        raise ValidationError("Full name is required.", "full_name")
-    clean_email = (email or "").strip().lower()
-    if not EMAIL_PATTERN.match(clean_email):
-        raise ValidationError("Enter a valid email address.", "email")
-    if db.query_one("SELECT id FROM users WHERE email = ?", (clean_email,)):
-        raise ConflictError("An account with this email already exists.")
+    require_admin(actor)
+    clean_name = _clean_full_name(full_name)
+    clean_email = _clean_email(email, taken=ConflictError)
     problems = security.password_problems(password)
     if problems:
         raise ValidationError(problems[0], "password")
@@ -318,8 +321,3 @@ def create_admin(actor: dict[str, Any], full_name: str, email: str,
         (clean_name, clean_email, salt, digest),
     )
     return get_user(int(cursor.lastrowid)) or {}
-
-
-def _require_admin(actor: dict[str, Any] | None) -> None:
-    if not actor or actor.get("role") != "admin":
-        raise PermissionDenied("Only an administrator can do that.")

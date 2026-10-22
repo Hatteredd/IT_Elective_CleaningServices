@@ -42,13 +42,9 @@ cleanhome/
   password change, and when an admin creates an account.
 * 5 failed logins lock the account for 5 minutes; a successful sign-in
   clears the counter.
-* First-run accounts get random passwords that are printed to the console
-  **once**. The current live credentials are:
-
-  | Role | Email | Password |
-  |------|-------|----------|
-  | Admin | `admin@cleanhome.ph` | `wnuuResiEz89yf` |
-  | Customer | `customer@cleanhome.ph` | `BN9imVVqrkEgRe` |
+* There are no built-in accounts and no passwords in this repository. The
+  first launch opens the **Create Admin Account** screen; customers register
+  through **Sign Up**. Every password is hashed with PBKDF2.
 
 ### 1.4 UI
 

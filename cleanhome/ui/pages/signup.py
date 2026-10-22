@@ -9,7 +9,7 @@ from cleanhome.services import ValidationError, auth_service
 from cleanhome.ui import components, templates
 
 
-class Signup(templates.AuthTemplate):
+class Signup(templates.FormMixin, templates.AuthTemplate):
     """Create a customer account."""
 
     page_name = "Signup"
@@ -47,7 +47,7 @@ class Signup(templates.AuthTemplate):
             field.input.bind("<Return>", lambda event: self._create_account())
         self.bind("<Return>", lambda event: self._create_account())
 
-        self.error_label = components.BodyLabel(inner, text="", wraplength=380,
+        self.error_label = components.BodyLabel(inner, text="", wraplength=theme.WRAP_FORM,
                                     justify="left", surface=True)
         self.error_label.pack_forget()
 
@@ -62,7 +62,7 @@ class Signup(templates.AuthTemplate):
         link.bind("<Button-1>", lambda event: self.app.go("Login"))
 
     def _create_account(self) -> None:
-        self._clear_errors()
+        self.clear_form_errors()
         try:
             user = auth_service.register(
                 self.full_name.get(),
@@ -72,20 +72,8 @@ class Signup(templates.AuthTemplate):
                 self.confirm.input.get(),
             )
         except ValidationError as error:
-            field = self._fields.get(error.field or "")
-            if field is not None:
-                field.set_error(str(error))
-            else:
-                self._show_error(str(error))
+            self.show_field_error(error)
             return
         self.app.sign_in(user)
         self.app.flash("Your account is ready. Welcome to CleanHome!", "success")
 
-    def _show_error(self, message: str) -> None:
-        self.error_label.configure(text=message)
-        self.error_label.pack(anchor="w", pady=(0, theme.SPACE_SM))
-
-    def _clear_errors(self) -> None:
-        self.error_label.pack_forget()
-        for field in (self.full_name, self.email, self.phone, self.password, self.confirm):
-            field.clear_error()

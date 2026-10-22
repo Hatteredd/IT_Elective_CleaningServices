@@ -7,11 +7,12 @@ Pages assemble these and never create one-off styled widgets of their own.
 from __future__ import annotations
 
 import tkinter as tk
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from tkinter import ttk
 from typing import Callable
 
 from cleanhome import config, theme, utils
+from cleanhome.services.booking_service import STATUS_LABELS, available_slots
 
 
 # ── Icons (Canvas-drawn, no external assets) ─────────────────────────────────
@@ -30,11 +31,14 @@ class SparkleIcon(_IconCanvas):
         super().__init__(parent, **kwargs)
         s = self.size
         c = s / 2.0
-        self.create_oval(c - 3, c - 3, c + 3, c + 3, fill=theme.PRIMARY, outline="")
-        self.create_line(c, 2, c, c - 6, fill=theme.PRIMARY, width=2)
-        self.create_line(c, s - 2, c, c + 6, fill=theme.PRIMARY, width=2)
-        self.create_line(2, c, c - 6, c, fill=theme.PRIMARY, width=2)
-        self.create_line(s - 2, c, c + 6, c, fill=theme.PRIMARY, width=2)
+        dot = theme.ICON_DOT_RADIUS
+        arm = theme.ICON_ARM_LENGTH
+        edge = theme.ICON_EDGE_INSET
+        self.create_oval(c - dot, c - dot, c + dot, c + dot, fill=theme.PRIMARY, outline="")
+        self.create_line(c, edge, c, c - arm, fill=theme.PRIMARY, width=theme.STROKE_WIDTH)
+        self.create_line(c, s - edge, c, c + arm, fill=theme.PRIMARY, width=theme.STROKE_WIDTH)
+        self.create_line(edge, c, c - arm, c, fill=theme.PRIMARY, width=theme.STROKE_WIDTH)
+        self.create_line(s - edge, c, c + arm, c, fill=theme.PRIMARY, width=theme.STROKE_WIDTH)
 
 
 class ClockIcon(_IconCanvas):
@@ -42,19 +46,32 @@ class ClockIcon(_IconCanvas):
         super().__init__(parent, **kwargs)
         s = self.size
         c = s / 2.0
-        self.create_oval(6, 6, s - 6, s - 6, outline=theme.PRIMARY, width=2)
-        self.create_line(c, c, c, c - 8, fill=theme.PRIMARY, width=2)
-        self.create_line(c, c, c + 6, c + 2, fill=theme.PRIMARY, width=2)
+        ring = theme.ICON_RING_INSET
+        self.create_oval(ring, ring, s - ring, s - ring, outline=theme.PRIMARY,
+                         width=theme.STROKE_WIDTH)
+        self.create_line(c, c, c, c - theme.ICON_HAND_LONG, fill=theme.PRIMARY,
+                         width=theme.STROKE_WIDTH)
+        self.create_line(c, c, c + theme.ICON_HAND_SHORT, c + theme.ICON_EDGE_INSET,
+                         fill=theme.PRIMARY, width=theme.STROKE_WIDTH)
 
 
 class ShieldIcon(_IconCanvas):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)
         s = self.size
-        self.create_polygon(s / 2, 6, s - 6, 10, s - 6, s / 2, s / 2, s - 6, 6, s / 2, 6, 10,
-                            fill="", outline=theme.PRIMARY, width=2)
-        self.create_line(s / 2 - 4, s / 2, s / 2 - 1, s / 2 + 3, fill=theme.PRIMARY, width=2)
-        self.create_line(s / 2 - 1, s / 2 + 3, s / 2 + 4, s / 2 - 2, fill=theme.PRIMARY, width=2)
+        c = s / 2.0
+        side = theme.ICON_SHIELD_INSET
+        shoulder = theme.ICON_SHIELD_SHOULDER
+        self.create_polygon(c, side, s - side, shoulder, s - side, c, c, s - side,
+                            side, c, side, shoulder,
+                            fill="", outline=theme.PRIMARY, width=theme.STROKE_WIDTH)
+        (x1, y1), (x2, y2), (x3, y3) = theme.ICON_SHIELD_TICK
+        self.create_line(c + x1, c + y1, c + x2, c + y2, fill=theme.PRIMARY,
+                         width=theme.STROKE_WIDTH)
+        self.create_line(c + x2, c + y2, c + x3, c + y3, fill=theme.PRIMARY,
+                         width=theme.STROKE_WIDTH)
+
+
 class HeadingLabel(tk.Label):
     """A page title (H1)."""
 
@@ -113,7 +130,7 @@ class PriceLabel(tk.Label):
 class BrandLabel(tk.Label):
     """The company name in the navigation bar and the footer."""
 
-    def __init__(self, parent, text: str = "", size: int = 13, **kwargs):
+    def __init__(self, parent, text: str = "", size: int = theme.BRAND_FONT_SIZE, **kwargs):
         kwargs.setdefault("bg", theme.BG_SURFACE)
         kwargs.setdefault("fg", theme.TEXT)
         kwargs.setdefault("font", (theme.FONT_FAMILY, size, "bold"))
@@ -127,7 +144,7 @@ class HeroLabel(tk.Label):
     def __init__(self, parent, text: str = "", **kwargs):
         kwargs.setdefault("bg", theme.BG_SURFACE)
         kwargs.setdefault("fg", theme.TEXT)
-        kwargs.setdefault("font", (theme.FONT_FAMILY, 28, "bold"))
+        kwargs.setdefault("font", (theme.FONT_FAMILY, theme.HERO_FONT_SIZE, "bold"))
         super().__init__(parent, text=text, **kwargs)
 
 
@@ -137,7 +154,7 @@ class DateCombo(ttk.Combobox):
     The customer never types a date: the list is generated from today onwards.
     """
 
-    def __init__(self, parent, days: int = 60, start_offset: int = 0,
+    def __init__(self, parent, days: int = config.DATE_PICKER_DAYS, start_offset: int = 0,
                  optional: bool = False, **kwargs):
         self._values: list[tuple[str, str]] = []
         self._offset = 1 if optional else 0
@@ -146,7 +163,7 @@ class DateCombo(ttk.Combobox):
             day = first + timedelta(days=offset)
             self._values.append((day.isoformat(), day.strftime("%a, %b %d, %Y")))
         kwargs.setdefault("state", "readonly")
-        kwargs.setdefault("width", 26)
+        kwargs.setdefault("width", theme.FIELD_WIDTH_DATE)
         labels = [label for _, label in self._values]
         if optional:
             labels.insert(0, "Any date")
@@ -160,13 +177,6 @@ class DateCombo(ttk.Combobox):
         if index < 0 or index >= len(self._values):
             return None
         return date.fromisoformat(self._values[index][0])
-
-    def select_date(self, value: date) -> None:
-        """Select a specific date if it is in the list."""
-        for index, (iso, _) in enumerate(self._values):
-            if iso == value.isoformat():
-                self.current(index + self._offset)
-                return
 
     def set_date(self, value: date) -> bool:
         """Select a date, adding it to the list when it is missing."""
@@ -188,7 +198,8 @@ class Dropdown(ttk.Combobox):
     """A dropdown the user picks from; nothing is ever typed by hand."""
 
     def __init__(self, parent, options: list[str], *, on_change: Callable | None = None,
-                 textvariable: tk.StringVar | None = None, width: int = 24, **kwargs):
+                 textvariable: tk.StringVar | None = None, width: int = theme.DROPDOWN_WIDTH,
+                 **kwargs):
         kwargs.setdefault("state", "readonly")
         super().__init__(parent, textvariable=textvariable, width=width, **kwargs)
         self.configure(values=list(options))
@@ -216,7 +227,7 @@ class SelectBox(ttk.Combobox):
     """
 
     def __init__(self, parent, label: str, options: list[tuple[str, str]], *,
-                 on_change: Callable | None = None, width: int = 22, **kwargs):
+                 on_change: Callable | None = None, width: int = theme.DROPDOWN_SORT, **kwargs):
         super().__init__(parent, style="TCombobox", width=width, **kwargs)
         self.label = ttk.Label(parent, text=label, style="Caption.TLabel")
         self._values = list(options)
@@ -233,13 +244,6 @@ class SelectBox(ttk.Combobox):
         if index < 0 or index >= len(self._values):
             return ""
         return self._values[index][0]
-
-    def select_key(self, key: str) -> None:
-        """Select the option with this key."""
-        for index, (value, _) in enumerate(self._values):
-            if value == key:
-                self.current(index)
-                return
 
 
 class _ClickButton(ttk.Button):
@@ -335,6 +339,11 @@ class PasswordInput(ttk.Entry):
         super().__init__(parent, show="•", **kwargs)
         self._visible = False
 
+    @property
+    def revealed(self) -> bool:
+        """True while the password is shown as plain text."""
+        return self._visible
+
     def toggle(self) -> None:
         self._visible = not self._visible
         self.configure(show="" if self._visible else "•")
@@ -399,36 +408,25 @@ class FormField(ttk.Frame):
     """A label, a 2px-ring input, and an inline error message."""
 
     def __init__(self, parent, label: str, *, secret: bool = False,
-                 placeholder: str = "", width: int = 40, **kwargs):
+                 placeholder: str = "", width: int = theme.FIELD_WIDTH, **kwargs):
         super().__init__(parent, style="TFrame", **kwargs)
-        self._secret = secret
         ttk.Label(self, text=label, style="Caption.TLabel").pack(anchor="w",
                                                                  pady=(0, theme.SPACE_XS))
         if secret:
             row = ttk.Frame(self, style="TFrame")
             row.pack(fill="x")
-            self.input = ttk.Entry(row, show="•", width=width, style="Field.TEntry")
+            self.input = PasswordInput(row, width=width, style="Field.TEntry")
             self._ring = InputRing(row, self.input)
             self._ring.pack(side="left", fill="x", expand=True)
-            self._toggle = ttk.Button(row, text="Show", style="Secondary.TButton", width=6,
-                                      command=self.toggle_password)
+            self._toggle = SecondaryButton(row, "Show", command=self.toggle_password,
+                                           width=theme.BUTTON_WIDTH_TOGGLE)
             self._toggle.pack(side="right", padx=(theme.SPACE_SM, 0))
-            self._placeholder = ""
-            self._has_ph = False
         else:
-            self.input = ttk.Entry(self, width=width, style="Field.TEntry")
-            self._placeholder = placeholder
-            if placeholder:
-                self.input.insert(0, placeholder)
-                self.input.configure(foreground=theme.TEXT_MUTED)
-                self._has_ph = True
-            else:
-                self._has_ph = False
+            self.input = TextInput(self, placeholder=placeholder, width=width,
+                                   style="Field.TEntry")
             self._ring = InputRing(self, self.input)
             self._ring.pack(fill="x")
             self._toggle = None
-            self.input.bind("<FocusIn>", self._on_focus_in, add="+")
-            self.input.bind("<FocusOut>", self._on_focus_out, add="+")
 
         self.input.bind("<FocusIn>", lambda e: self._ring.set_focus(True), add="+")
         self.input.bind("<FocusOut>", lambda e: self._ring.set_focus(False), add="+")
@@ -438,43 +436,15 @@ class FormField(ttk.Frame):
                                       style="Caption.TLabel", foreground=theme.DANGER)
         self._error_label.pack(anchor="w", pady=(theme.SPACE_XS, 0))
 
-    def _on_focus_in(self, event: tk.Event) -> None:
-        if self._has_ph and self.input.get() == self._placeholder:
-            self.input.delete(0, tk.END)
-            self.input.configure(foreground=theme.TEXT)
-            self._has_ph = False
-
-    def _on_focus_out(self, event: tk.Event) -> None:
-        if not self.input.get().strip():
-            if self._placeholder:
-                self.input.insert(0, self._placeholder)
-                self.input.configure(foreground=theme.TEXT_MUTED)
-                self._has_ph = True
-
     def toggle_password(self) -> None:
-        if self.input.cget("show"):
-            self.input.configure(show="")
-            self._toggle.configure(text="Hide")
-        else:
-            self.input.configure(show="•")
-            self._toggle.configure(text="Show")
+        self.input.toggle()
+        self._toggle.configure(text="Show" if not self.input.revealed else "Hide")
 
     def get(self) -> str:
-        value = self.input.get()
-        if self._has_ph and value == self._placeholder:
-            return ""
-        return value.strip()
+        return self.input.get()
 
     def set(self, value: str) -> None:
-        self.input.delete(0, tk.END)
-        if value:
-            self.input.insert(0, value)
-            self.input.configure(foreground=theme.TEXT)
-            self._has_ph = False
-        elif self._placeholder:
-            self.input.insert(0, self._placeholder)
-            self.input.configure(foreground=theme.TEXT_MUTED)
-            self._has_ph = True
+        self.input.set(value)
 
     def set_error(self, message: str | None) -> None:
         self.error_var.set(message or "")
@@ -508,14 +478,15 @@ class SearchBar(ttk.Frame):
         self.input.bind("<FocusOut>", self._ph_out)
         self._ring = InputRing(self, self.input)
         self._ring.pack(side="left")
-        self._ring.configure(width=320)
+        self._ring.configure(width=theme.SEARCH_WIDTH)
         self._ring.pack_propagate(False)
         self._ring.configure(height=theme.INPUT_HEIGHT)
         self.input.pack_configure(fill="x", expand=True)
         clear_frame = tk.Frame(self, bg=theme.BG_SURFACE)
         clear_frame.pack(side="left", padx=(theme.SPACE_XS, 0))
         self._clear = tk.Label(clear_frame, text="×", bg=theme.BG_SURFACE, fg=theme.TEXT_MUTED,
-                               font=(theme.FONT_FAMILY, 12, "bold"), cursor="hand2")
+                               font=(theme.FONT_FAMILY, theme.CLEAR_ICON_FONT_SIZE, "bold"),
+                               cursor="hand2")
         self._clear.pack()
         self._clear.bind("<Button-1>", lambda e: self.clear())
         self._on_change = on_change
@@ -604,7 +575,7 @@ class StatCard(tk.Frame):
 
     def __init__(self, parent, title: str, value: str, caption: str = "", **kwargs):
         super().__init__(parent, bg=theme.BG_SURFACE, highlightbackground=theme.BORDER,
-                         highlightthickness=1, bd=0, **kwargs)
+                         highlightthickness=theme.BORDER_WIDTH, bd=0, **kwargs)
         inner = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.CARD_PAD, pady=theme.CARD_PAD)
         inner.pack(fill="both", expand=True)
         tk.Label(inner, text=title.upper(), bg=theme.BG_SURFACE, fg=theme.TEXT_MUTED,
@@ -629,7 +600,8 @@ class PriceTag(tk.Frame):
                                       bg=theme.BG_SURFACE, fg=theme.TEXT_MUTED,
                                       font=theme.font("CAPTION"))
             original_label.pack(side="left", padx=(theme.SPACE_SM, 0))
-            original_label.configure(font=(theme.FONT_FAMILY, 10, "overstrike"))
+            original_label.configure(
+                font=(theme.FONT_FAMILY, theme.OVERSTRIKE_FONT_SIZE, "overstrike"))
         if duration_mins:
             tk.Label(self, text=f"  •  {duration_mins} mins", bg=theme.BG_SURFACE,
                      fg=theme.TEXT_MUTED, font=theme.font("CAPTION")).pack(side="left")
@@ -651,9 +623,12 @@ class Toggle(tk.Canvas):
         self.delete("all")
         on = bool(self.variable.get())
         track = theme.TOGGLE_ON if on else theme.TOGGLE_OFF
-        self.create_rounded_rect(0, 0, theme.TOGGLE_WIDTH, theme.TOGGLE_HEIGHT, radius=11, fill=track, outline="")
-        thumb_x = theme.TOGGLE_WIDTH - theme.TOGGLE_HEIGHT + 2 if on else 2
-        self.create_oval(thumb_x, 2, thumb_x + theme.TOGGLE_HEIGHT - 4, theme.TOGGLE_HEIGHT - 2,
+        inset = theme.TOGGLE_INSET
+        self.create_rounded_rect(0, 0, theme.TOGGLE_WIDTH, theme.TOGGLE_HEIGHT,
+                                 fill=track, outline="")
+        thumb_x = (theme.TOGGLE_WIDTH - theme.TOGGLE_HEIGHT + inset) if on else inset
+        self.create_oval(thumb_x, inset, thumb_x + theme.TOGGLE_HEIGHT - 2 * inset,
+                         theme.TOGGLE_HEIGHT - inset,
                          fill=theme.TOGGLE_THUMB, outline=theme.BORDER)
 
     def _toggle(self, event=None):
@@ -661,7 +636,7 @@ class Toggle(tk.Canvas):
         if self.command:
             self.command()
 
-    def create_rounded_rect(self, x1, y1, x2, y2, radius=25, **kwargs):
+    def create_rounded_rect(self, x1, y1, x2, y2, radius=theme.TOGGLE_RADIUS, **kwargs):
         points = [x1 + radius, y1,
                   x1 + radius, y1,
                   x2 - radius, y1,
@@ -709,10 +684,13 @@ class CheckBox(tk.Canvas):
     def _draw(self):
         self.delete("all")
         checked = bool(self.variable.get())
-        self.create_rectangle(1, 1, theme.CHECK_SIZE - 1, theme.CHECK_SIZE - 1,
+        edge = theme.BORDER_WIDTH
+        size = theme.CHECK_SIZE
+        self.create_rectangle(edge, edge, size - edge, size - edge,
                               outline=theme.BORDER, fill=theme.BG_SURFACE)
         if checked:
-            self.create_line(4, 9, 7, 12, 14, 5, fill=theme.CHECK_MARK, width=2)
+            points = [coordinate for point in theme.CHECK_TICK for coordinate in point]
+            self.create_line(*points, fill=theme.CHECK_MARK, width=theme.STROKE_WIDTH)
 
     def _toggle(self, event=None):
         self.variable.set(not bool(self.variable.get()))
@@ -741,13 +719,13 @@ class NavBar(tk.Frame):
         inner = tk.Frame(self, bg=theme.BG_SURFACE)
         inner.pack(fill="both", expand=True, padx=theme.SPACE_XL)
 
-        brand = tk.Label(inner, text=config.COMPANY_NAME, bg=theme.BG_SURFACE, fg=theme.TEXT,
-                         font=(theme.FONT_FAMILY, 15, "bold"), cursor="hand2")
+        brand = BrandLabel(inner, text=config.COMPANY_NAME, size=theme.BRAND_BOLD_SIZE,
+                           cursor="hand2")
         brand.pack(side="left", pady=theme.SPACE_MD)
         brand.bind("<Button-1>", lambda e: app.go(app.home_page()))
 
         badge = tk.Label(inner, text="Metro Manila", bg=theme.PRIMARY_SOFT, fg=theme.PRIMARY,
-                         font=theme.font("CAPTION"), padx=theme.SPACE_SM, pady=2)
+                         font=theme.font("CAPTION"), padx=theme.SPACE_SM, pady=theme.SPACE_XS)
         badge.pack(side="left", padx=(theme.SPACE_SM, 0), pady=theme.SPACE_MD)
 
         links = tk.Frame(inner, bg=theme.BG_SURFACE)
@@ -799,7 +777,7 @@ class ServiceCard(tk.Frame):
                  on_details: Callable | None = None, show_book: bool = True,
                  featured: bool = False, **kwargs):
         border = theme.PRIMARY if featured else theme.BORDER
-        thickness = 2 if featured else 1
+        thickness = theme.FOCUS_RING if featured else theme.BORDER_WIDTH
         super().__init__(parent, bg=theme.BG_SURFACE, highlightbackground=border,
                          highlightthickness=thickness, bd=0, **kwargs)
         inner = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.CARD_PAD, pady=theme.CARD_PAD)
@@ -813,7 +791,7 @@ class ServiceCard(tk.Frame):
         PriceTag(inner, service["price"], duration_mins=service["duration_mins"]).pack(
             anchor="w", pady=(theme.SPACE_SM, 0))
         if service.get("description"):
-            BodyLabel(inner, text=service["description"], wraplength=520,
+            BodyLabel(inner, text=service["description"], wraplength=theme.WRAP_COLUMN,
                       justify="left", surface=True).pack(anchor="w",
                                                        pady=(theme.SPACE_SM, 0))
 
@@ -839,24 +817,21 @@ class PromoCard(tk.Frame):
 
     def __init__(self, parent, promo: dict, on_book: Callable | None = None, **kwargs):
         super().__init__(parent, bg=theme.BG_SURFACE, highlightbackground=theme.BORDER,
-                         highlightthickness=1, bd=0, **kwargs)
+                         highlightthickness=theme.BORDER_WIDTH, bd=0, **kwargs)
         accent = tk.Frame(self, bg=theme.PRIMARY, height=theme.ACCENT_HEIGHT)
         accent.pack(fill="x")
         inner = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.CARD_PAD, pady=theme.CARD_PAD)
         inner.pack(fill="both", expand=True)
 
         pill = tk.Label(inner, text="LIMITED TIME", bg=theme.PRIMARY_SOFT, fg=theme.PRIMARY,
-                        font=theme.font("CAPTION"), padx=theme.SPACE_SM, pady=2)
+                        font=theme.font("CAPTION"), padx=theme.SPACE_SM, pady=theme.SPACE_XS)
         pill.pack(anchor="w")
         tk.Label(inner, text=promo["title"], bg=theme.BG_SURFACE, fg=theme.TEXT,
                  font=theme.font("H2")).pack(anchor="w", pady=(theme.SPACE_SM, 0))
-        if promo["discount_type"] == "percent":
-            value = f"{promo['discount_value']:,.0f}% off"
-        else:
-            value = f"{utils.format_peso(promo['discount_value'])} off"
+        value = utils.format_discount(promo)
         tk.Label(inner, text=value, bg=theme.BG_SURFACE, fg=theme.PRIMARY,
-                 font=(theme.FONT_FAMILY, 22, "bold")).pack(anchor="w",
-                                                           pady=(theme.SPACE_XS, 0))
+                 font=(theme.FONT_FAMILY, theme.PROMO_PRICE_FONT_SIZE, "bold")).pack(
+            anchor="w", pady=(theme.SPACE_XS, 0))
         tk.Label(inner, text=f"Ends {utils.format_date(promo['end_date'])}",
                  bg=theme.BG_SURFACE, fg=theme.TEXT_MUTED,
                  font=theme.font("CAPTION")).pack(anchor="w", pady=(theme.SPACE_XS, 0))
@@ -866,40 +841,54 @@ class PromoCard(tk.Frame):
 
 
 class BookingRow(tk.Frame):
-    """One booking in a list."""
+    """One booking in a customer's list, with the actions they may take."""
 
-    def __init__(self, parent, booking: dict, on_open: Callable | None = None, **kwargs):
+    def __init__(self, parent, booking: dict, *, on_reschedule: Callable | None = None,
+                 on_cancel: Callable | None = None, on_open: Callable | None = None,
+                 **kwargs):
         super().__init__(parent, bg=theme.BG_SURFACE, highlightbackground=theme.BORDER,
-                         highlightthickness=1, bd=0, **kwargs)
-        inner = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.CARD_PAD, pady=theme.SPACE_MD)
+                         highlightthickness=theme.BORDER_WIDTH, bd=0, **kwargs)
+        inner = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.CARD_PAD, pady=theme.CARD_PAD)
         inner.pack(fill="both", expand=True)
 
-        left = tk.Frame(inner, bg=theme.BG_SURFACE)
-        left.pack(side="left", fill="x", expand=True)
-        tk.Label(left, text=booking.get("service_name", "—"), bg=theme.BG_SURFACE,
-                 fg=theme.TEXT, font=theme.font("BODY")).pack(anchor="w")
-        tk.Label(left, text=utils.format_datetime(booking.get("scheduled_at")),
-                 bg=theme.BG_SURFACE, fg=theme.TEXT_MUTED,
-                 font=theme.font("CAPTION")).pack(anchor="w")
-        tk.Label(left, text=booking.get("address", ""), bg=theme.BG_SURFACE,
-                 fg=theme.TEXT_MUTED, font=theme.font("CAPTION")).pack(anchor="w")
+        top = tk.Frame(inner, bg=theme.BG_SURFACE)
+        top.pack(fill="x")
+        SubheadingLabel(top, text=booking.get("service_name", "—"), surface=True).pack(side="left")
+        Badge(top, booking_service_label(booking.get("status", "")),
+              booking.get("status", "")).pack(side="left", padx=theme.SPACE_SM)
+        PriceLabel(top, text=utils.format_peso(booking.get("total_at_booking", 0)),
+                   surface=True).pack(side="right")
 
-        right = tk.Frame(inner, bg=theme.BG_SURFACE)
-        right.pack(side="right")
-        Badge(right, booking_service_label(booking.get("status", "")),
-              booking.get("status", "")).pack(side="right", padx=(theme.SPACE_MD, 0))
-        tk.Label(right, text=utils.format_peso(booking.get("total_at_booking", 0)),
-                 bg=theme.BG_SURFACE, fg=theme.PRIMARY,
-                 font=theme.font("BODY")).pack(side="right")
-        if on_open:
-            SecondaryButton(right, "View", command=on_open).pack(side="right",
-                                                                  padx=theme.SPACE_SM)
+        BodyLabel(inner, text=utils.format_datetime(booking.get("scheduled_at")),
+                  surface=True).pack(anchor="w", pady=(theme.SPACE_XS, 0))
+        if booking.get("address"):
+            CaptionLabel(inner, text=booking["address"], wraplength=theme.WRAP_CARD,
+                         justify="left", surface=True).pack(anchor="w")
+        if booking.get("notes"):
+            CaptionLabel(inner, text=f"Notes: {booking['notes']}", wraplength=theme.WRAP_CARD,
+                         justify="left", surface=True).pack(anchor="w")
+        if booking.get("cancel_reason"):
+            CaptionLabel(inner, text=f"Cancellation reason: {booking['cancel_reason']}",
+                         wraplength=theme.WRAP_CARD, justify="left", surface=True).pack(anchor="w")
+
+        if on_open or on_reschedule or on_cancel:
+            actions = tk.Frame(inner, bg=theme.BG_SURFACE)
+            actions.pack(anchor="e", pady=(theme.SPACE_MD, 0))
+            if on_open:
+                SecondaryButton(actions, "View", command=on_open).pack(
+                    side="left", padx=(0, theme.SPACE_SM))
+            if on_reschedule:
+                SecondaryButton(actions, "Reschedule", command=on_reschedule).pack(
+                    side="left", padx=(0, theme.SPACE_SM))
+            if on_cancel:
+                DangerButton(actions, "Cancel", command=on_cancel).pack(side="left")
 
 
 class DataTable(ttk.Frame):
     """A treeview table with a scrollbar."""
 
-    def __init__(self, parent, columns, headings=None, widths=None, height=12, **kwargs):
+    def __init__(self, parent, columns, headings=None, widths=None,
+                 height=theme.DATA_TABLE_HEIGHT, **kwargs):
         super().__init__(parent, style="TFrame", **kwargs)
         self.container, self.tree = theme.make_treeview_with_scrollbar(
             self, columns=columns, headings=headings, widths=widths, height=height)
@@ -930,11 +919,10 @@ class Footer(tk.Frame):
 
         brand = tk.Frame(columns, bg=theme.BG_SURFACE)
         brand.pack(side="left", fill="x", expand=True)
-        tk.Label(brand, text=config.COMPANY_NAME, bg=theme.BG_SURFACE, fg=theme.TEXT,
-                 font=(theme.FONT_FAMILY, 13, "bold")).pack(anchor="w")
+        BrandLabel(brand, text=config.COMPANY_NAME).pack(anchor="w")
         tk.Label(brand, text=config.COMPANY_TAGLINE, bg=theme.BG_SURFACE, fg=theme.TEXT_MUTED,
-                 font=theme.font("CAPTION"), wraplength=300, justify="left").pack(anchor="w",
-                                                                                  pady=(2, 0))
+                 font=theme.font("CAPTION"), wraplength=theme.WRAP_COLUMN,
+                 justify="left").pack(anchor="w", pady=(theme.SPACE_XS, 0))
 
         links = tk.Frame(columns, bg=theme.BG_SURFACE)
         links.pack(side="left", padx=theme.SPACE_LG)
@@ -964,7 +952,7 @@ class Footer(tk.Frame):
                  font=theme.font("CAPTION")).pack(anchor="w")
 
         Divider(self).pack(fill="x", padx=theme.SPACE_XL)
-        tk.Label(self, text=f"© 2026 {config.COMPANY_NAME}. All rights reserved.",
+        tk.Label(self, text=f"© {date.today().year} {config.COMPANY_NAME}. All rights reserved.",
                  bg=theme.BG_SURFACE, fg=theme.TEXT_MUTED,
                  font=theme.font("CAPTION")).pack(anchor="w", padx=theme.SPACE_XL,
                                                    pady=(theme.SPACE_SM, theme.SPACE_MD))
@@ -1002,7 +990,7 @@ class Toast(tk.Frame):
         self.lift()
         if self._after_id:
             self.after_cancel(self._after_id)
-        self._after_id = self.after(3500, self.hide)
+        self._after_id = self.after(theme.TOAST_DURATION_MS, self.hide)
 
     def hide(self) -> None:
         self.place_forget()
@@ -1011,38 +999,114 @@ class Toast(tk.Frame):
 
 def booking_service_label(status: str) -> str:
     """Return the human label for a booking status."""
-    from cleanhome.services.booking_service import STATUS_LABELS
-
     return STATUS_LABELS.get(status, status.replace("_", " ").title())
 
 
 # ── Dialogs ──────────────────────────────────────────────────────────────────
-class CancelDialog:
+class FormMixin:
+    """Shared error handling for a form built from ``FormField`` widgets.
+
+    A page or dialog sets ``_fields`` (a dict keyed by the service's field
+    name) and, for a page, ``error_label``; it then reuses these helpers
+    instead of writing its own copies.
+    """
+
+    _fields: dict
+
+    def clear_form_errors(self) -> None:
+        """Clear the inline error on every field."""
+        for field in self._fields.values():
+            field.clear_error()
+
+    def show_form_error(self, message: str) -> None:
+        """Show a message that does not belong to one particular field."""
+        self.error_label.configure(text=message)
+        self.error_label.pack(anchor="w", pady=(0, theme.SPACE_SM))
+
+    def show_field_error(self, error) -> None:
+        """Put a validation error under its field, or on the form if unknown."""
+        field = self._fields.get(getattr(error, "field", None) or "")
+        if field is not None:
+            field.set_error(str(error))
+        else:
+            self.show_form_error(str(error))
+
+
+class FormDialog(FormMixin, tk.Toplevel):
+    """A modal dialog with a form body and Cancel / Save buttons.
+
+    Subclasses fill ``self.body`` with fields and implement ``_submit``.
+    Call ``self.saved()`` after a successful save.
+    """
+
+    def __init__(self, parent, title: str, on_saved: Callable[[], None] | None = None,
+                 save_label: str = "Save"):
+        super().__init__(parent)
+        self.transient(parent)
+        self.grab_set()
+        self.title(title)
+        self.resizable(False, False)
+        self.on_saved = on_saved
+
+        container = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
+                             pady=theme.SPACE_LG)
+        container.pack(fill="both", expand=True)
+        self.body = tk.Frame(container, bg=theme.BG_SURFACE)
+        self.body.pack(fill="both", expand=True)
+        actions = tk.Frame(container, bg=theme.BG_SURFACE)
+        actions.pack(anchor="e", pady=(theme.SPACE_MD, 0))
+        SecondaryButton(actions, "Cancel", command=self.close).pack(
+            side="left", padx=(0, theme.SPACE_SM))
+        PrimaryButton(actions, save_label, command=self._submit).pack(side="left")
+        self.bind("<Escape>", lambda event: self.close())
+
+    def _submit(self) -> None:
+        raise NotImplementedError
+
+    def show_form_error(self, message: str) -> None:
+        self.app_flash(message)
+
+    def app_flash(self, message: str, kind: str = "error") -> None:
+        """Send a message to the window that opened this dialog."""
+        app = getattr(self.master, "app", None)
+        if app is not None:
+            app.flash(message, kind)
+
+    def close(self) -> None:
+        self.grab_release()
+        self.destroy()
+
+    def saved(self) -> None:
+        """Close the dialog and tell the page that something changed."""
+        self.close()
+        if self.on_saved is not None:
+            self.on_saved()
+class CancelDialog(tk.Toplevel):
     """Ask for a cancellation reason before a booking is cancelled."""
 
     def __init__(self, parent, on_submit: Callable[[str], None], *,
-                 require_reason: bool = True, title: str = "Cancel booking"):
+                 require_reason: bool = True, title: str = "Cancel Booking"):
+        super().__init__(parent)
         self.result: str | None = None
         self.submitted = False
         self.require_reason = require_reason
         self.on_submit = on_submit
-        self.window = tk.Toplevel(parent)
-        self.window.title(title)
-        self.window.transient(parent)
-        self.window.resizable(False, False)
-        self.window.grab_set()
+        self.title(title)
+        self.transient(parent)
+        self.resizable(False, False)
+        self.grab_set()
 
-        frame = tk.Frame(self.window, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
+        frame = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
                          pady=theme.SPACE_LG)
         frame.pack(fill="both", expand=True)
         SubheadingLabel(frame, text=title, surface=True).pack(anchor="w")
         prompt = ("Tell us why you are cancelling. This helps us improve."
                   if require_reason else
                   "Add a reason (optional).")
-        BodyLabel(frame, text=prompt, wraplength=380,
+        BodyLabel(frame, text=prompt, wraplength=theme.WRAP_DIALOG,
                   justify="left", surface=True).pack(anchor="w",
                                                     pady=(theme.SPACE_XS, theme.SPACE_MD))
-        self.reason = ttk.Entry(frame, width=44)
+        self.reason = TextInput(frame, width=theme.FIELD_WIDTH_DIALOG)
         self.reason.pack(fill="x")
         self.reason.bind("<Return>", lambda event: self._submit())
         self.error = CaptionLabel(frame, text="", surface=True)
@@ -1051,17 +1115,17 @@ class CancelDialog:
 
         actions = tk.Frame(frame, bg=theme.BG_SURFACE)
         actions.pack(anchor="e", pady=(theme.SPACE_MD, 0))
-        SecondaryButton(actions, "Keep it", command=self._close).pack(side="left",
-                                                                       padx=(0, theme.SPACE_SM))
-        DangerButton(actions, "Cancel booking", command=self._submit).pack(side="left")
+        SecondaryButton(actions, "Keep It", command=self._close).pack(
+            side="left", padx=(0, theme.SPACE_SM))
+        DangerButton(actions, "Cancel Booking", command=self._submit).pack(side="left")
 
-        self.window.bind("<Escape>", lambda event: self._close())
-        self.window.wait_window(self.window)
+        self.bind("<Escape>", lambda event: self._close())
+        self.wait_window(self)
         if self.submitted:
             on_submit(self.result or "")
 
     def _submit(self) -> None:
-        reason = self.reason.get().strip()
+        reason = self.reason.get()
         if not reason and self.require_reason:
             self.error.configure(text="A reason is required.")
             return
@@ -1070,34 +1134,28 @@ class CancelDialog:
         self._close()
 
     def _close(self) -> None:
-        self.window.grab_release()
-        self.window.destroy()
+        self.grab_release()
+        self.destroy()
 
 
-class RescheduleDialog:
+class RescheduleDialog(tk.Toplevel):
     """Pick a new date and time for a booking."""
 
     def __init__(self, parent, service: dict, on_submit: Callable[[object], None]):
-        from datetime import datetime
-
-        from cleanhome import config
-        from cleanhome.services import booking_service
-
+        super().__init__(parent)
         self.result: datetime | None = None
         self.submitted = False
         self.service = service
-        self.booking_service = booking_service
         self._slots: list[datetime] = []
-        self.window = tk.Toplevel(parent)
-        self.window.title("Reschedule booking")
-        self.window.transient(parent)
-        self.window.resizable(False, False)
-        self.window.grab_set()
+        self.title("Reschedule Booking")
+        self.transient(parent)
+        self.resizable(False, False)
+        self.grab_set()
 
-        frame = tk.Frame(self.window, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
+        frame = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
                          pady=theme.SPACE_LG)
         frame.pack(fill="both", expand=True)
-        SubheadingLabel(frame, text="Reschedule booking", surface=True).pack(anchor="w")
+        SubheadingLabel(frame, text="Reschedule Booking", surface=True).pack(anchor="w")
         CaptionLabel(frame, text=service["name"], surface=True).pack(
             anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
 
@@ -1107,21 +1165,24 @@ class RescheduleDialog:
         self.date.bind("<<ComboboxSelected>>", lambda event: self._refresh_slots())
 
         CaptionLabel(frame, text="Available times", surface=True).pack(anchor="w")
-        self.time = ttk.Combobox(frame, state="readonly", width=24)
+        self.time = ttk.Combobox(frame, state="readonly", width=theme.DROPDOWN_WIDTH)
         self.time.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_SM))
         self.time.bind("<Return>", lambda event: self._submit())
         self.hint = CaptionLabel(frame, text="", surface=True)
-        self.hint.configure(fg=theme.DANGER, wraplength=380, justify="left")
+        self.hint.configure(fg=theme.DANGER, wraplength=theme.WRAP_DIALOG, justify="left")
         self.hint.pack(anchor="w")
 
         actions = tk.Frame(frame, bg=theme.BG_SURFACE)
         actions.pack(anchor="e", pady=(theme.SPACE_MD, 0))
-        SecondaryButton(actions, "Close", command=self._close).pack(side="left",
-                                                                     padx=(0, theme.SPACE_SM))
-        PrimaryButton(actions, "Confirm new time", command=self._submit).pack(side="left")
+        SecondaryButton(actions, "Close", command=self._close).pack(
+            side="left", padx=(0, theme.SPACE_SM))
+        PrimaryButton(actions, "Confirm New Time", command=self._submit).pack(side="left")
 
-        self.window.bind("<Escape>", lambda event: self._close())
+        self.bind("<Escape>", lambda event: self._close())
         self._refresh_slots()
+        self.wait_window(self)
+        if self.submitted and self.result is not None:
+            on_submit(self.result)
 
     def _refresh_slots(self) -> None:
         self.time.set("")
@@ -1130,7 +1191,7 @@ class RescheduleDialog:
         if day is None:
             self.hint.configure(text="Pick a date first.")
             return
-        slots = self.booking_service.available_slots(self.service["id"], day)
+        slots = available_slots(self.service["id"], day)
         if not slots:
             self.hint.configure(text="There are no open slots on that day.")
             return
@@ -1150,31 +1211,36 @@ class RescheduleDialog:
         for slot in self._slots:
             if slot.strftime("%I:%M %p").lstrip("0") == choice:
                 self.result = slot
+                self.submitted = True
                 self._close()
                 return
         self.hint.configure(text="That time is no longer available. Pick another one.")
 
     def _close(self) -> None:
-        self.window.grab_release()
-        self.window.destroy()
+        self.grab_release()
+        self.destroy()
+
 
 class ProfileCard(tk.Frame):
     """Avatar initials, name, and role — used on the Profile page."""
 
     def __init__(self, parent, user: dict, **kwargs):
         super().__init__(parent, bg=theme.BG_SURFACE, highlightbackground=theme.BORDER,
-                         highlightthickness=1, bd=0, **kwargs)
+                         highlightthickness=theme.BORDER_WIDTH, bd=0, **kwargs)
         inner = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.CARD_PAD, pady=theme.CARD_PAD)
         inner.pack(fill="both", expand=True)
 
         name = (user.get("full_name") or "").strip()
         initials = "".join(part[0] for part in name.split()[:2]).upper() or "?"
-        avatar = tk.Canvas(inner, width=56, height=56, bg=theme.BG_SURFACE,
+        size = theme.AVATAR_SIZE
+        avatar = tk.Canvas(inner, width=size, height=size, bg=theme.BG_SURFACE,
                            highlightthickness=0, bd=0)
         avatar.pack(side="left", anchor="n")
-        avatar.create_oval(2, 2, 54, 54, fill=theme.PRIMARY_SOFT, outline="")
-        avatar.create_text(28, 29, text=initials, fill=theme.PRIMARY,
-                           font=(theme.FONT_FAMILY, 18, "bold"))
+        avatar.create_oval(theme.AVATAR_INSET, theme.AVATAR_INSET,
+                           size - theme.AVATAR_INSET, size - theme.AVATAR_INSET,
+                           fill=theme.PRIMARY_SOFT, outline="")
+        avatar.create_text(size / 2, size / 2, text=initials, fill=theme.PRIMARY,
+                           font=(theme.FONT_FAMILY, theme.AVATAR_INITIAL_FONT_SIZE, "bold"))
 
         details = tk.Frame(inner, bg=theme.BG_SURFACE)
         details.pack(side="left", fill="x", expand=True, padx=(theme.SPACE_MD, 0))
@@ -1182,10 +1248,10 @@ class ProfileCard(tk.Frame):
                  font=theme.font("H2")).pack(anchor="w")
         role = (user.get("role") or "").capitalize()
         tk.Label(details, text=role, bg=theme.BG_SURFACE, fg=theme.TEXT_MUTED,
-                 font=theme.font("CAPTION")).pack(anchor="w", pady=(2, 0))
+                 font=theme.font("CAPTION")).pack(anchor="w", pady=(theme.SPACE_XS, 0))
         if user.get("email"):
             tk.Label(details, text=user["email"], bg=theme.BG_SURFACE, fg=theme.TEXT_BODY,
-                     font=theme.font("CAPTION")).pack(anchor="w", pady=(2, 0))
+                     font=theme.font("CAPTION")).pack(anchor="w", pady=(theme.SPACE_XS, 0))
 
 
 class ConfirmDialog:
@@ -1204,7 +1270,7 @@ class ConfirmDialog:
                          pady=theme.SPACE_LG)
         frame.pack(fill="both", expand=True)
         SubheadingLabel(frame, text=title, surface=True).pack(anchor="w")
-        BodyLabel(frame, text=message, surface=True, wraplength=360,
+        BodyLabel(frame, text=message, surface=True, wraplength=theme.WRAP_DIALOG,
                   justify="left").pack(anchor="w", pady=(theme.SPACE_SM, theme.SPACE_MD))
 
         actions = tk.Frame(frame, bg=theme.BG_SURFACE)

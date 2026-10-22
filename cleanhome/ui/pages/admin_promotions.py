@@ -6,7 +6,7 @@ import tkinter as tk
 from datetime import date, timedelta
 from tkinter import ttk
 
-from cleanhome import theme, utils
+from cleanhome import config, theme, utils
 from cleanhome.services import ServiceError, catalog_service
 from cleanhome.ui import components, templates
 
@@ -25,7 +25,7 @@ class AdminPromotions(templates.AdminTemplate):
         self.table = components.DataTable(
             body, columns,
             headings=["ID", "Title", "Type", "Value", "Service", "Start", "End", "Status"],
-            widths=[50, 160, 80, 80, 160, 130, 130, 80])
+            widths=theme.PROMOTIONS_TABLE_WIDTHS)
         self.table.pack(fill="both", expand=True, pady=(theme.SPACE_LG, 0))
         self._refresh()
 
@@ -41,7 +41,7 @@ class AdminPromotions(templates.AdminTemplate):
         self.table.clear()
         services = {s["id"]: s["name"] for s in catalog_service.list_services(include_inactive=True)}
         for index, promo in enumerate(catalog_service.list_promotions(active_only=False)):
-            value = f"{promo['discount_value']:,.0f}%" if promo["discount_type"] == "percent" else f"₱{promo['discount_value']:,.0f}"
+            value = utils.format_discount(promo)
             self.table.add_row((
                 promo["id"],
                 promo["title"],
@@ -97,62 +97,66 @@ class AdminPromotions(templates.AdminTemplate):
             apply, confirm_label="End Promotion", danger=True)
 
 
-class PromoForm(tk.Toplevel):
+class PromoForm(components.FormDialog):
+    """Modal form to add or edit a promotion."""
+
     def __init__(self, parent, actor, promo, on_saved):
-        super().__init__(parent)
-        self.transient(parent)
-        self.grab_set()
-        self.title("Add Promotion" if promo is None else "Edit Promotion")
-        self.resizable(False, False)
+        super().__init__(parent, "Add Promotion" if promo is None else "Edit Promotion",
+                         on_saved)
         self.actor = actor
         self.promo = promo
-        self.on_saved = on_saved
 
-        frame = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL, pady=theme.SPACE_LG)
-        frame.pack(fill="both", expand=True)
-
-        self.title_field = components.FormField(frame, "Title")
+        self.title_field = components.FormField(self.body, "Title")
         self.title_field.pack(fill="x", pady=(0, theme.SPACE_MD))
-        components.CaptionLabel(frame, text="Service (leave blank for all)", surface=True).pack(anchor="w")
+        components.CaptionLabel(self.body, text="Service (leave blank for all)",
+                                surface=True).pack(anchor="w")
         services = [("All services", None)]
-        for s in catalog_service.list_services(include_inactive=True):
-            services.append((s["name"], s["id"]))
-        self.service_map = {name: sid for name, sid in services}
+        for service in catalog_service.list_services(include_inactive=True):
+            services.append((service["name"], service["id"]))
+        self.service_map = dict(services)
         self.service_var = tk.StringVar()
         self.service_box = components.Dropdown(
-            frame, [name for name, _ in services],
-            textvariable=self.service_var, width=40)
+            self.body, [name for name, _ in services],
+            textvariable=self.service_var, width=theme.DROPDOWN_SERVICE)
         self.service_box.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
 
-        components.CaptionLabel(frame, text="Discount type", surface=True).pack(anchor="w")
+        components.CaptionLabel(self.body, text="Discount type", surface=True).pack(anchor="w")
         self.type_var = tk.StringVar(value="percent")
-        type_row = tk.Frame(frame, bg=theme.BG_SURFACE)
+        type_row = tk.Frame(self.body, bg=theme.BG_SURFACE)
         type_row.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
         ttk.Radiobutton(type_row, text="Percent (%)", variable=self.type_var,
                         value="percent").pack(side="left")
         ttk.Radiobutton(type_row, text="Fixed (₱)", variable=self.type_var,
                         value="fixed").pack(side="left", padx=(theme.SPACE_MD, 0))
 
-        self.value = components.FormField(frame, "Discount value")
+        self.value = components.FormField(self.body, "Discount value")
         self.value.pack(fill="x", pady=(0, theme.SPACE_MD))
 
-        components.CaptionLabel(frame, text="Starts", surface=True).pack(anchor="w")
-        start_row = tk.Frame(frame, bg=theme.BG_SURFACE)
+        components.CaptionLabel(self.body, text="Starts", surface=True).pack(anchor="w")
+        start_row = tk.Frame(self.body, bg=theme.BG_SURFACE)
         start_row.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
-        self.start_date = components.DateCombo(start_row, days=730, start_offset=-365)
+        self.start_date = components.DateCombo(
+            start_row, days=theme.PROMO_DATE_SPAN_DAYS,
+            start_offset=theme.PROMO_DATE_SPAN_OFFSET)
         self.start_date.set_date(date.today())
         self.start_date.pack(side="left")
-        self.start_time = components.Dropdown(start_row, utils.time_slot_options(), width=14)
+        self.start_time = components.Dropdown(start_row, utils.time_slot_options(),
+                                              width=theme.FIELD_WIDTH_SHORT)
         self.start_time.pack(side="left", padx=(theme.SPACE_SM, 0))
 
-        components.CaptionLabel(frame, text="Ends", surface=True).pack(anchor="w")
-        end_row = tk.Frame(frame, bg=theme.BG_SURFACE)
+        components.CaptionLabel(self.body, text="Ends", surface=True).pack(anchor="w")
+        end_row = tk.Frame(self.body, bg=theme.BG_SURFACE)
         end_row.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
-        self.end_date = components.DateCombo(end_row, days=730, start_offset=-365)
-        self.end_date.set_date(date.today() + timedelta(days=30))
+        self.end_date = components.DateCombo(
+            end_row, days=theme.PROMO_DATE_SPAN_DAYS,
+            start_offset=theme.PROMO_DATE_SPAN_OFFSET)
+        self.end_date.set_date(date.today() + timedelta(days=config.PROMO_DEFAULT_DAYS))
         self.end_date.pack(side="left")
-        self.end_time = components.Dropdown(end_row, utils.time_slot_options(), width=14)
+        self.end_time = components.Dropdown(end_row, utils.time_slot_options(),
+                                            width=theme.FIELD_WIDTH_SHORT)
         self.end_time.pack(side="left", padx=(theme.SPACE_SM, 0))
+
+        self._fields = {"title": self.title_field, "discount_value": self.value}
 
         if promo:
             self.title_field.set(promo["title"])
@@ -165,12 +169,6 @@ class PromoForm(tk.Toplevel):
             self._select_datetime(self.start_date, self.start_time, promo["start_date"])
             self._select_datetime(self.end_date, self.end_time, promo["end_date"])
 
-        actions = tk.Frame(frame, bg=theme.BG_SURFACE)
-        actions.pack(anchor="e", pady=(theme.SPACE_MD, 0))
-        components.SecondaryButton(actions, "Cancel", command=self.destroy).pack(
-            side="left", padx=(0, theme.SPACE_SM))
-        components.PrimaryButton(actions, "Save", command=self._save).pack(side="left")
-
     def _select_datetime(self, date_box, time_box, value) -> None:
         """Show an existing timestamp in the date and time pickers."""
         parsed = utils.parse_datetime(value)
@@ -178,18 +176,15 @@ class PromoForm(tk.Toplevel):
             return
         date_box.set_date(parsed.date())
         label = parsed.strftime("%I:%M %p").lstrip("0")
-        options = utils.time_slot_options()
-        if label in options:
+        if label in utils.time_slot_options():
             time_box.set(label)
 
-    def _save(self) -> None:
-        for field in (self.title_field, self.value):
-            if hasattr(field, "clear_error"):
-                field.clear_error()
+    def _submit(self) -> None:
+        self.clear_form_errors()
         start = utils.combine_date_time(self.start_date.get_date(), self.start_time.get())
         end = utils.combine_date_time(self.end_date.get_date(), self.end_time.get())
         if start is None or end is None:
-            self._flash("Pick a start date and time and an end date and time.")
+            self.app_flash("Pick a start date and time and an end date and time.")
             return
         try:
             value = float(self.value.get())
@@ -197,7 +192,7 @@ class PromoForm(tk.Toplevel):
             self.value.set_error("Enter a number.")
             return
         if end <= start:
-            self._flash("The end must be after the start.")
+            self.app_flash("The end must be after the start.")
             return
         service_id = self.service_map.get(self.service_var.get())
         try:
@@ -210,17 +205,6 @@ class PromoForm(tk.Toplevel):
                     self.actor, self.promo["id"], self.title_field.get(),
                     service_id, self.type_var.get(), value, start, end)
         except ServiceError as error:
-            field_map = {"title": self.title_field, "discount_value": self.value}
-            field = field_map.get(error.field or "")
-            if field is not None:
-                field.set_error(str(error))
-            else:
-                self._flash(str(error))
+            self.show_field_error(error)
             return
-        self.on_saved()
-        self.destroy()
-
-    def _flash(self, message: str) -> None:
-        app = getattr(self.master, "app", None)
-        if app is not None:
-            app.flash(message, "error")
+        self.saved()

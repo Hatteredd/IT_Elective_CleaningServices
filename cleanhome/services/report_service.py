@@ -8,14 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from cleanhome import db, utils
-from cleanhome.services import PermissionDenied
+from cleanhome.services import require_admin
 
 REVENUE_EXPRESSION = "(b.price_at_booking - b.discount_at_booking)"
 
 
 def dashboard_stats(actor: dict[str, Any] | None) -> dict[str, Any]:
     """Return the numbers shown on the administration dashboard."""
-    _require_admin(actor)
+    require_admin(actor)
     pending = db.query_one(
         "SELECT COUNT(*) AS n FROM bookings WHERE status = 'pending'")["n"]
     today = db.query_one(
@@ -44,7 +44,7 @@ def dashboard_stats(actor: dict[str, Any] | None) -> dict[str, Any]:
 def revenue_report(actor: dict[str, Any] | None, start: date | None = None,
                    end: date | None = None) -> dict[str, Any]:
     """Return booking totals and revenue for a date range."""
-    _require_admin(actor)
+    require_admin(actor)
     clauses: list[str] = []
     params: list[Any] = []
     if start:
@@ -89,7 +89,7 @@ def revenue_report(actor: dict[str, Any] | None, start: date | None = None,
 def export_revenue_csv(actor: dict[str, Any] | None, path: str | Path,
                        start: date | None = None, end: date | None = None) -> Path:
     """Write a revenue report to a CSV file and return its path."""
-    _require_admin(actor)
+    require_admin(actor)
     clauses: list[str] = []
     params: list[Any] = []
     if start:
@@ -128,7 +128,3 @@ def export_revenue_csv(actor: dict[str, Any] | None, path: str | Path,
             ])
     return target
 
-
-def _require_admin(actor: dict[str, Any] | None) -> None:
-    if not actor or actor.get("role") != "admin":
-        raise PermissionDenied("Only an administrator can do that.")

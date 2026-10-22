@@ -14,6 +14,7 @@ from tkinter import ttk
 
 from cleanhome import theme
 from cleanhome.ui import components
+from cleanhome.ui.components import FormMixin
 
 
 class Page(ttk.Frame):
@@ -38,6 +39,8 @@ class Page(ttk.Frame):
 class PageTemplate(Page):
     """Public shell: navigation bar, scrolling body, footer."""
 
+    show_footer = True
+
     def build(self, **kwargs) -> None:
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -50,33 +53,24 @@ class PageTemplate(Page):
 
         inner = self.scroller.inner
         inner.grid_columnconfigure(0, weight=1)
-        inner.grid_columnconfigure(2, weight=1)
         self.body = ttk.Frame(inner, style="TFrame")
-        self.body.grid(row=0, column=1, sticky="nsew", padx=theme.SPACE_XL,
+        self.body.grid(row=0, column=0, sticky="nsew", padx=theme.SPACE_XL,
                        pady=theme.SPACE_XL)
+        self.scroller.canvas.bind("<Configure>", self._fit_content_width, add="+")
 
-        components.Footer(self, self.app).grid(row=2, column=0, sticky="ew")
+        if self.show_footer:
+            components.Footer(self, self.app).grid(row=2, column=0, sticky="ew")
+
+    def _fit_content_width(self, event) -> None:
+        """Centre the body and keep it from growing past ``CONTENT_MAX_WIDTH``."""
+        extra = max(0, (event.width - theme.CONTENT_MAX_WIDTH) // 2)
+        self.body.grid_configure(padx=theme.SPACE_XL + extra)
 
 
-class AdminTemplate(Page):
+class AdminTemplate(PageTemplate):
     """Administration shell: navigation bar and a scrolling body."""
 
-    def build(self, **kwargs) -> None:
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-
-        self.navbar = components.NavBar(self, self.app, active=self.page_name)
-        self.navbar.grid(row=0, column=0, sticky="ew")
-
-        self.scroller = theme.ScrollableFrame(self)
-        self.scroller.grid(row=1, column=0, sticky="nsew")
-
-        inner = self.scroller.inner
-        inner.grid_columnconfigure(0, weight=1)
-        inner.grid_columnconfigure(2, weight=1)
-        self.body = ttk.Frame(inner, style="TFrame")
-        self.body.grid(row=0, column=1, sticky="nsew", padx=theme.SPACE_XL,
-                       pady=theme.SPACE_XL)
+    show_footer = False
 
 
 class AuthTemplate(Page):
@@ -105,16 +99,19 @@ def page_header(parent, title: str, subtitle: str = "") -> tk.Frame:
     frame = tk.Frame(parent, bg=theme.BG_PAGE)
     components.HeadingLabel(frame, text=title).pack(anchor="w")
     if subtitle:
-        components.BodyLabel(frame, text=subtitle, wraplength=760,
+        components.BodyLabel(frame, text=subtitle, wraplength=theme.WRAP_SECTION,
                              justify="left").pack(anchor="w", pady=(theme.SPACE_XS, 0))
     return frame
 
 
 def card(parent, padding: int = theme.CARD_PAD) -> tk.Frame:
-    """Return a white card with a 1px border."""
-    outer = tk.Frame(parent, bg=theme.BORDER)
-    inner = tk.Frame(outer, bg=theme.BG_SURFACE, padx=padding, pady=padding)
-    inner.pack(fill="both", expand=True, padx=(0, 1), pady=(0, 1))
+    """Return a white card: a 1px border plus a soft bottom/right shadow edge."""
+    outer = tk.Frame(parent, bg=theme.SHADOW_EDGE)
+    inner = tk.Frame(outer, bg=theme.BG_SURFACE, highlightbackground=theme.BORDER,
+                     highlightthickness=theme.BORDER_WIDTH, bd=0,
+                     padx=padding, pady=padding)
+    inner.pack(fill="both", expand=True, padx=(0, theme.BORDER_WIDTH),
+               pady=(0, theme.BORDER_WIDTH))
     outer.inner = inner
     return outer
 

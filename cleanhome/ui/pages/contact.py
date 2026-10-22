@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
 import tkinter as tk
+import webbrowser
 
 from cleanhome import config, theme
 from cleanhome.ui import components, templates
@@ -20,7 +19,7 @@ class Contact(templates.PageTemplate):
         body = self.body
 
         header = templates.page_header(
-            body, "Contact us",
+            body, "Contact Us",
             "We answer every message during business hours, usually within the same day.")
         header.pack(fill="x")
 
@@ -37,9 +36,11 @@ class Contact(templates.PageTemplate):
         ):
             row = tk.Frame(inner, bg=theme.BG_SURFACE)
             row.pack(fill="x", pady=(theme.SPACE_SM, 0))
-            components.CaptionLabel(row, text=label, width=14, anchor="w", surface=True).pack(side="left")
-            components.BodyLabel(row, text=value, wraplength=600,
-                     justify="left", surface=True).pack(side="left", fill="x", expand=True)
+            components.CaptionLabel(row, text=label, width=theme.LABEL_WIDTH_NARROW,
+                                    anchor="w", surface=True).pack(side="left")
+            components.BodyLabel(row, text=value, wraplength=theme.WRAP_CONTACT,
+                                 justify="left", surface=True).pack(side="left", fill="x",
+                                                                   expand=True)
 
         actions = tk.Frame(inner, bg=theme.BG_SURFACE)
         actions.pack(anchor="w", pady=(theme.SPACE_LG, 0))
@@ -55,9 +56,8 @@ class Contact(templates.PageTemplate):
     def _open_link(self, target: str) -> None:
         """Hand a mailto: or tel: link to the operating system."""
         try:
-            if target.startswith("mailto:"):
-                os.startfile(target)  # noqa: S606 - the OS handles the protocol
-            else:
-                subprocess.Popen(["start", "", target], shell=False)  # noqa: S603,S607
-        except OSError:
+            opened = webbrowser.open(target)
+        except webbrowser.Error:
+            opened = False
+        if not opened:
             self.app.flash("Open that link manually: " + target, "warning")

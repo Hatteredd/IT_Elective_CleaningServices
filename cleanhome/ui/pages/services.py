@@ -41,7 +41,7 @@ class Services(templates.PageTemplate):
 
         self.grid = tk.Frame(body, bg=theme.BG_PAGE)
         self.grid.pack(fill="both", expand=True)
-        for column in range(3):
+        for column in range(theme.CARD_COLUMNS):
             self.grid.grid_columnconfigure(column, weight=1, uniform="services")
 
         self._services = catalog_service.list_services()
@@ -79,15 +79,15 @@ class Services(templates.PageTemplate):
             self.count_label.configure(text=f"{len(matches)} of {len(self._services)} services")
         if not matches:
             empty = tk.Frame(self.grid, bg=theme.BG_PAGE)
-            empty.grid(row=0, column=0, columnspan=3, sticky="ew")
+            empty.grid(row=0, column=0, columnspan=theme.CARD_COLUMNS, sticky="ew")
             components.BodyLabel(empty, text="No service matches that search.", surface=False).pack(anchor="w")
             return
         for index, service in enumerate(matches):
-            row, column = divmod(index, 3)
+            row, column = divmod(index, theme.CARD_COLUMNS)
             holder = tk.Frame(self.grid, bg=theme.BG_PAGE)
             holder.grid(row=row, column=column, sticky="nsew",
                         padx=(0 if column == 0 else theme.SPACE_SM,
-                              0 if column == 2 else theme.SPACE_SM),
+                              0 if column == theme.CARD_COLUMNS - 1 else theme.SPACE_SM),
                         pady=(0, theme.SPACE_MD))
             components.ServiceCard(
                 holder, service,

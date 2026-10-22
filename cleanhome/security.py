@@ -40,7 +40,7 @@ def verify_password(password: str, salt: str, expected_hash: str) -> bool:
     return hmac.compare_digest(candidate, expected_hash)
 
 
-def generate_password(length: int = 14) -> str:
+def generate_password(length: int = config.GENERATED_PASSWORD_LENGTH) -> str:
     """Generate a readable random password for first-run accounts."""
     alphabet = string.ascii_letters + string.digits
     while True:

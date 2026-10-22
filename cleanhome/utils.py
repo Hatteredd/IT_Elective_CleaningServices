@@ -42,6 +42,13 @@ def format_peso(amount: object) -> str:
     return f"{config.CURRENCY_SYMBOL}{to_decimal(amount):,.2f}"
 
 
+def format_discount(promo: dict) -> str:
+    """Return ``10% off`` or ``₱200.00 off`` for a promotion dictionary."""
+    if promo.get("discount_type") == "percent":
+        return f"{to_decimal(promo.get('discount_value')):,.0f}% off"
+    return f"{format_peso(promo.get('discount_value'))} off"
+
+
 def format_date(value: object) -> str:
     """Format a date as ``Oct 21, 2026``."""
     parsed = _as_date(value)
@@ -62,19 +69,20 @@ def format_datetime(value: object) -> str:
     return f"{parsed.strftime(DATE_FORMAT)} · {parsed.strftime(TIME_FORMAT).lstrip('0')}"
 
 
-def format_datetime_for_input(value: object) -> str:
-    """Format a timestamp for an ``<Entry>`` as ``YYYY-MM-DD HH:MM``."""
-    parsed = _as_datetime(value)
-    return parsed.strftime("%Y-%m-%d %H:%M") if parsed else ""
+def business_hours() -> str:
+    """Return the opening hours as ``8:00 AM - 6:00 PM``."""
+    opening = time(config.BUSINESS_OPEN_HOUR, 0)
+    closing = time(config.BUSINESS_CLOSE_HOUR, 0)
+    return f"{format_time(opening)} - {format_time(closing)}"
 
 
 def time_slot_options() -> list[str]:
     """Every bookable start time of the business day, as ``8:00 AM`` labels."""
     options: list[str] = []
-    minutes = config.BUSINESS_OPEN_HOUR * 60
-    closing = config.BUSINESS_CLOSE_HOUR * 60
+    minutes = config.BUSINESS_OPEN_HOUR * config.MINUTES_PER_HOUR
+    closing = config.BUSINESS_CLOSE_HOUR * config.MINUTES_PER_HOUR
     while minutes + config.SLOT_INTERVAL_MINUTES <= closing:
-        hour, minute = divmod(minutes, 60)
+        hour, minute = divmod(minutes, config.MINUTES_PER_HOUR)
         meridiem = "AM" if hour < 12 else "PM"
         options.append(f"{hour % 12 or 12}:{minute:02d} {meridiem}")
         minutes += config.SLOT_INTERVAL_MINUTES

@@ -25,19 +25,22 @@ class AdminBookings(templates.AdminTemplate):
                                            on_change=self._refresh)
         self.search.pack(side="left")
         self.status = components.Dropdown(
-            toolbar, ["All", "pending", "confirmed", "in_progress", "completed", "cancelled"],
-            width=16, on_change=lambda value: self._refresh())
+            toolbar, ["All", "pending", "confirmed", "in_progress", "completed",
+                      "cancelled"],
+            width=theme.DROPDOWN_STATUS, on_change=lambda value: self._refresh())
         self.status.pack(side="left", padx=theme.SPACE_SM)
 
         components.CaptionLabel(toolbar, text="From", surface=False).pack(
             side="left", padx=(theme.SPACE_MD, theme.SPACE_XS))
-        self.date_from = components.DateCombo(toolbar, days=365, start_offset=-365,
-                                              optional=True)
+        self.date_from = components.DateCombo(
+            toolbar, days=theme.DATE_SPAN_YEAR, start_offset=-theme.DATE_SPAN_YEAR,
+            optional=True)
         self.date_from.bind("<<ComboboxSelected>>", lambda event: self._refresh())
         self.date_from.pack(side="left")
         components.CaptionLabel(toolbar, text="To", surface=False).pack(
             side="left", padx=(theme.SPACE_SM, theme.SPACE_XS))
-        self.date_to = components.DateCombo(toolbar, days=365, optional=True)
+        self.date_to = components.DateCombo(toolbar, days=theme.DATE_SPAN_YEAR,
+                                            optional=True)
         self.date_to.bind("<<ComboboxSelected>>", lambda event: self._refresh())
         self.date_to.pack(side="left")
 
@@ -65,11 +68,11 @@ class AdminBookings(templates.AdminTemplate):
              "total"),
             headings=["ID", "Customer", "Email", "Phone", "Service", "When", "Address",
                       "Status", "Total"],
-            widths=[45, 120, 160, 120, 140, 150, 190, 90, 85])
+            widths=theme.BOOKINGS_TABLE_WIDTHS)
         self.table.pack(fill="both", expand=True)
-        self._reload()
+        self._refresh()
 
-    def _reload(self) -> None:
+    def _refresh(self) -> None:
         status = self.status.get()
         if status == "All":
             status = None
@@ -94,9 +97,6 @@ class AdminBookings(templates.AdminTemplate):
                 utils.format_peso(booking["total_at_booking"]),
             ))
 
-    def _refresh(self) -> None:
-        self._reload()
-
     def _change(self, new_status: str) -> None:
         booking_id = self._selected_id()
         if booking_id is None:
@@ -108,7 +108,7 @@ class AdminBookings(templates.AdminTemplate):
             self.app.flash(str(error), "error")
             return
         self.app.flash("Booking updated.", "success")
-        self._reload()
+        self._refresh()
 
     def _cancel_with_reason(self) -> None:
         booking_id = self._selected_id()
@@ -126,7 +126,7 @@ class AdminBookings(templates.AdminTemplate):
             self.app.flash(str(error), "error")
             return
         self.app.flash("Booking cancelled.", "info")
-        self._reload()
+        self._refresh()
 
     def _selected_id(self):
         selection = self.table.tree.selection()

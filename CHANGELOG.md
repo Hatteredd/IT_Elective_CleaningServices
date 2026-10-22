@@ -3,6 +3,53 @@
 All notable changes to CleanHome PH are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased] — 22 October 2026: UI cleanup and verification
+
+### Changed
+
+* Every page now draws its spacing, widths, wraps, and table columns from
+  `theme.py`; business numbers come from `config.py`. The only remaining
+  literal in the UI path is the toast height animation origin.
+* `FormMixin` (`clear_form_errors`, `show_form_error`, `show_field_error`)
+  lives in `components.py` and is shared by the auth pages and the new
+  `FormDialog`. `AddAdminDialog`, `PromoForm`, and `ServiceForm` are now
+  `FormDialog` subclasses instead of hand-built dialogs.
+* `CancelDialog` and `RescheduleDialog` are `tk.Toplevel` subclasses with a
+  consistent body/actions layout; rescheduling calls the shared
+  `available_slots(...)` helper.
+* `contact.py` opens the support mail client through `webbrowser` and falls
+  back to an in-app message; it no longer spawns `os`/`subprocess` calls.
+* `home.py` and `promotions.py` wire each `PromoCard` to the Book page through
+  `on_book`, so every promotion button navigates.
+* `admin_bookings` uses one `_refresh` path (the duplicate `_reload` is
+  gone); the dashboard and reports use `DASHBOARD_COLUMNS`,
+  `REPORT_COLUMNS`, `UPCOMING_BOOKINGS_LIMIT`, and
+  `config.REPORT_WINDOW_DAYS`.
+* First-run documentation now matches the app: the **Create Admin Account**
+  screen creates the first administrator, customers self-register, and no
+  password is seeded, printed, or written to the repository.
+
+### Fixed
+
+* `PageTemplate` crashed with `TclError` because
+  `grid_columnconfigure` has no `maxsize` option; content width is now
+  centred by a `<Configure>` handler on the scroll canvas.
+* **Reschedule** raised `AttributeError` (`booking_service` was not in scope)
+  and its confirm button did nothing; both are fixed and covered by the
+  harness.
+* The UI harness cancelled a booking inside the 24-hour cutoff, so the
+  expected refusal masked the rest of the flow; scenarios now book at least
+  four days ahead and drive the real dialogs.
+* `format_discount()` is shared by the promo cards, promotion list, and
+  service details page so the “10% off” wording cannot drift.
+
+### Verification
+
+* `python -m unittest discover -s cleanhome/tests -t .` — 101 tests, OK.
+* `python -m cleanhome.tests.ui.harness` — every scenario passes.
+* Credential literals were removed from `README.md`, `PHASE1_REPORT.md`, and
+  `AUDIT.md`; `cleanhome.db` is explicitly ignored.
+
 ## [Unreleased] — Phase 1: restructure and rebuild
 
 The application was rewritten as a single Tkinter/ttk desktop app with a

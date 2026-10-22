@@ -34,13 +34,17 @@ class Promotions(templates.PageTemplate):
 
         grid = tk.Frame(body, bg=theme.BG_PAGE)
         grid.pack(fill="both", expand=True)
-        for column in range(3):
+        for column in range(theme.CARD_COLUMNS):
             grid.grid_columnconfigure(column, weight=1, uniform="promos")
         for index, promo in enumerate(active):
-            row, column = divmod(index, 3)
+            row, column = divmod(index, theme.CARD_COLUMNS)
             holder = tk.Frame(grid, bg=theme.BG_PAGE)
             holder.grid(row=row, column=column, sticky="nsew",
                         padx=(0 if column == 0 else theme.SPACE_SM,
-                              0 if column == 2 else theme.SPACE_SM),
+                              0 if column == theme.CARD_COLUMNS - 1 else theme.SPACE_SM),
                         pady=(0, theme.SPACE_MD))
-            components.PromoCard(holder, promo).pack(fill="both", expand=True)
+            components.PromoCard(
+                holder, promo,
+                on_book=lambda p=promo: self.app.go("Book",
+                                                   service_id=p.get("service_id")),
+            ).pack(fill="both", expand=True)

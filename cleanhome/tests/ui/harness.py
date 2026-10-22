@@ -13,13 +13,14 @@ from __future__ import annotations
 import sys
 import tempfile
 import tkinter as tk
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
+from tkinter import messagebox
 
 from cleanhome import config, db, security
 from cleanhome.services import auth_service, booking_service, catalog_service
+from cleanhome.ui import components
 from cleanhome.ui.app import CleanHomeApp
-from cleanhome.ui.components import CancelDialog, RescheduleDialog
 from cleanhome.ui.pages.admin_customers import AddAdminDialog
 from cleanhome.ui.pages.admin_promotions import PromoForm
 from cleanhome.ui.pages.admin_services import ServiceForm
@@ -80,6 +81,15 @@ def click_button(app: CleanHomeApp, text: str) -> bool:
     return False
 
 
+def close_dialogs(app: CleanHomeApp) -> None:
+    """Destroy anything that is still open, so a stuck dialog cannot hang."""
+    for window in find_dialogs(app):
+        try:
+            window.destroy()
+        except tk.TclError:
+            pass
+
+
 def select_row(page, row_id: int) -> bool:
     """Select the table row that belongs to this id."""
     for item in page.table.tree.get_children():
@@ -108,6 +118,81 @@ def fresh_database():
     db.migrate()
     db.seed()
     return folder
+
+
+def open_day(page, start: int = 4, days: int = 7) -> date | None:
+    """Pick the first day in the next week that has open slots."""
+    for offset in range(start, start + days):
+        page.date_box.set_date(date.today() + timedelta(days=offset))
+        page._load_slots()
+        if page.slots:
+            return page.date_box.get_date()
+    return None
+
+
+def check_first_run(app: CleanHomeApp) -> None:
+    print("the first-run setup screen")
+    app.go("Home")
+    app.update()
+    check("the app opens on the setup screen", app.current == "CreateAdmin", app.current)
+    page = current_page(app)
+    page.full_name.set("Setup Admin")
+    page.email.set("admin@test.ph")
+    page.password.set(PASSWORD)
+    page.confirm.set(PASSWORD)
+    page._create()
+    app.update()
+    check("the first admin was created", app.session.role == "admin", app.session.role)
+    check("the admin lands on the dashboard", app.current == "AdminDashboard",
+          app.current)
+
+    app.session.sign_out()
+    app.go("CreateAdmin")
+    app.update()
+    check("the setup screen refuses to reopen once an admin exists",
+          app.current == "Login", app.current)
+
+
+def check_components(app: CleanHomeApp) -> None:
+    print("the reusable components")
+    host = tk.Frame(app)
+    host.pack()
+
+    password = components.PasswordInput(host)
+    password.pack()
+    password.set("secret")
+    check("a password starts hidden", password.cget("show") != "")
+    password.toggle()
+    check("the reveal toggle shows the text",
+          password.revealed and password.cget("show") == "")
+    password.toggle()
+    check("the reveal toggle hides the text again", not password.revealed)
+
+    pressed: list[bool] = []
+    toggle = components.Toggle(host, command=lambda: pressed.append(True))
+    toggle.pack()
+    toggle._toggle()
+    check("the toggle flips and calls back", bool(toggle.variable.get()) and pressed)
+
+    box = components.CheckBox(host, text="Remember me")
+    box.pack()
+    box._toggle()
+    check("the checkbox flips", bool(box.variable.get()))
+
+    search = components.SearchBar(host, placeholder="Search", on_change=lambda value: None)
+    search.pack()
+    check("the search box starts empty", search.get() == "", search.get())
+    search.set("abc")
+    search.clear()
+    check("clear empties the search box", search.get() == "", search.get())
+
+    toast = components.Toast(app, app)
+    toast.show("hello", "success")
+    check("the toast appears", toast.winfo_manager() == "place")
+    toast.hide()
+    check("the toast hides", toast.winfo_manager() == "")
+
+    host.destroy()
 
 
 def check_every_screen(app: CleanHomeApp) -> None:
@@ -152,29 +237,6 @@ def check_every_screen(app: CleanHomeApp) -> None:
     check("a customer is kept out of the admin pages", app.current == "Home", app.current)
 
 
-def check_first_run(app: CleanHomeApp) -> None:
-    print("the first-run setup screen")
-    app.go("Home")
-    app.update()
-    check("the app opens on the setup screen", app.current == "CreateAdmin", app.current)
-    page = current_page(app)
-    page.full_name.set("Setup Admin")
-    page.email.set("admin@test.ph")
-    page.password.set(PASSWORD)
-    page.confirm.set(PASSWORD)
-    page._create()
-    app.update()
-    check("the first admin was created", app.session.role == "admin", app.session.role)
-    check("the admin lands on the dashboard", app.current == "AdminDashboard",
-          app.current)
-
-    app.session.sign_out()
-    app.go("CreateAdmin")
-    app.update()
-    check("the setup screen refuses to reopen once an admin exists",
-          app.current == "Login", app.current)
-
-
 def check_forced_password_change(app: CleanHomeApp) -> None:
     print("a generated password must be changed at first sign-in")
     make_user("forced@test.ph", "customer")
@@ -211,14 +273,16 @@ def check_dialogs(app: CleanHomeApp, admin) -> None:
           0 < form.winfo_height() <= config.WINDOW_MIN_HEIGHT, form.winfo_height())
     check("the start date defaults to today", form.start_date.get_date() == date.today())
     check("the end date defaults a month out",
-          form.end_date.get_date() == date.today() + timedelta(days=30))
+          form.end_date.get_date()
+          == date.today() + timedelta(days=config.PROMO_DEFAULT_DAYS))
     form.title_field.set("UI Test Promo")
     form.value.set("10")
-    form._save()
+    form._submit()
     app.update()
     made = [p for p in catalog_service.list_promotions(active_only=False)
             if p["title"] == "UI Test Promo"]
     check("the promotion was saved", len(made) == 1, len(made))
+    check("the promotion form closes after saving", not form.winfo_exists())
     if made:
         check("the saved start uses the picked date and time",
               made[0]["start_date"] == f"{date.today().isoformat()} 08:00:00",
@@ -233,7 +297,7 @@ def check_dialogs(app: CleanHomeApp, admin) -> None:
     form.description.set("Made by the harness")
     form.price.set("1500")
     form.duration.set("60")
-    form._save()
+    form._submit()
     app.update()
     made = [s for s in catalog_service.list_services(include_inactive=True)
             if s["name"] == "UI Test Service"]
@@ -246,7 +310,7 @@ def check_dialogs(app: CleanHomeApp, admin) -> None:
     dialog = AddAdminDialog(page, admin, lambda: None)
     app.update()
     check("the add admin dialog opens", dialog.winfo_exists())
-    dialog.destroy()
+    dialog.close()
     app.update()
 
     if service:
@@ -254,42 +318,39 @@ def check_dialogs(app: CleanHomeApp, admin) -> None:
         app.update()
         page = current_page(app)
         select_row(page, service["id"])
-        page._sync_toggle()
-        app.after(200, lambda: [w.destroy() for w in find_dialogs(app)])
         page.active_toggle.variable.set(False)
         page._toggle()
         app.update()
-        check("the archive uses a confirm dialog", True)
-        if find_dialogs(app):
-            click_button(app, "Cancel")
-            app.update()
+        check("archiving asks for confirmation", len(find_dialogs(app)) == 1,
+              len(find_dialogs(app)))
+        click_button(app, "Archive")
+        app.update()
+        check("the service was archived",
+              not catalog_service.get_service(service["id"])["is_active"])
         select_row(page, service["id"])
         page.active_toggle.variable.set(True)
         page._toggle()
         app.update()
+        check("the service was restored",
+              bool(catalog_service.get_service(service["id"])["is_active"]))
 
 
 def check_booking_flow(app: CleanHomeApp, customer) -> None:
     print("the customer booking flow")
-    services = catalog_service.list_services()
-    when = datetime.combine(date.today() + timedelta(days=4),
-                             datetime.min.time()).replace(hour=10)
-    booking = booking_service.create_booking(customer, services[0]["id"], when,
-                                             "12 Quezon Ave", "note")
-
     app.go("Book")
     app.update()
     page = current_page(app)
     check("the service list is filled", len(page.service_map) > 0)
-    page.date_box.set_date(date.today() + timedelta(days=3))
-    page._load_slots()
-    app.update()
-    check("slots are offered for the chosen day", len(page.slots) > 0, page.slots)
+
+    day = open_day(page)
+    check("slots are offered for a chosen day", day is not None, page.slots)
+    if day is None:
+        return
     page.time_var.set(page.time_box.cget("values")[0])
     page.address.set("12 Quezon Ave")
     page._update_quote()
     app.update()
-    check("the price is quoted", "₱" in page.total_label.cget("text"),
+    check("the price is quoted", "Total:" in page.total_label.cget("text"),
           page.total_label.cget("text"))
 
     before = len(booking_service.list_bookings_for_user(customer["id"]))
@@ -297,29 +358,58 @@ def check_booking_flow(app: CleanHomeApp, customer) -> None:
     app.update()
     after = len(booking_service.list_bookings_for_user(customer["id"]))
     check("the booking was created", after == before + 1, f"{before} -> {after}")
+    check("the customer lands on My Bookings", app.current == "MyBookings", app.current)
+
+    page = current_page(app)
+    check("the booking is listed", len(page.frames["Upcoming"].winfo_children()) > 0)
+    bookings = [b for b in booking_service.list_bookings_for_user(customer["id"])
+                if b["status"] in ("pending", "confirmed")]
+    booking = max(bookings, key=lambda b: b["id"])
+    original_when = booking["scheduled_at"]
+
+    def pick_new_time() -> None:
+        dialogs = find_dialogs(app)
+        if not dialogs:
+            return
+        dialog = dialogs[-1]
+        for offset in range(5, 12):
+            dialog.date.set_date(date.today() + timedelta(days=offset))
+            dialog._refresh_slots()
+            if dialog._slots:
+                break
+        if dialog._slots:
+            click_button(app, "Confirm New Time")
+        else:
+            click_button(app, "Close")
+
+    guard = app.after(5000, lambda: close_dialogs(app))
+    app.after(200, pick_new_time)
+    page._reschedule(booking)
+    try:
+        app.after_cancel(guard)
+    except tk.TclError:
+        pass
+    app.update()
+    moved = booking_service.get_booking(booking["id"])
+    check("the booking was rescheduled", moved["scheduled_at"] != original_when,
+          moved["scheduled_at"])
+    check("the reschedule dialog closed", not find_dialogs(app))
 
     app.go("MyBookings")
     app.update()
     page = current_page(app)
-    check("the booking is listed", len(page.frames["Upcoming"].winfo_children()) > 0)
-
-    app.after(300, lambda: app.after(200, lambda: click_button(app, "Cancel booking")))
-    app.after(5000, lambda: [w.destroy() for w in find_dialogs(app)])
+    guard = app.after(5000, lambda: close_dialogs(app))
+    app.after(200, lambda: click_button(app, "Cancel Booking"))
     page._cancel(booking)
+    try:
+        app.after_cancel(guard)
+    except tk.TclError:
+        pass
     app.update()
     check("the booking was cancelled",
           booking_service.get_booking(booking["id"])["status"] == "cancelled",
           booking_service.get_booking(booking["id"])["status"])
-
-    app.go("MyBookings")
-    app.update()
-    page = current_page(app)
-    page._reschedule(booking)
-    app.update()
-    check("the reschedule dialog opens", len(find_dialogs(app)) == 1)
-    for window in find_dialogs(app):
-        window.destroy()
-    app.update()
+    check("the cancel dialog closed", not find_dialogs(app))
 
 
 def check_admin_flow(app: CleanHomeApp, admin) -> None:
@@ -328,9 +418,11 @@ def check_admin_flow(app: CleanHomeApp, admin) -> None:
         db.query_one("SELECT id FROM users WHERE email = 'customer@test.ph'")["id"])
     services = catalog_service.list_services()
     when = datetime.combine(date.today() + timedelta(days=6),
-                             datetime.min.time()).replace(hour=10)
+                            time(config.BUSINESS_OPEN_HOUR))
     fresh = booking_service.create_booking(customer, services[0]["id"], when,
                                            "12 Quezon Ave", "note")
+    booking_id = fresh["id"]
+
     app.go("AdminBookings")
     app.update()
     page = current_page(app)
@@ -339,35 +431,18 @@ def check_admin_flow(app: CleanHomeApp, admin) -> None:
     page.date_to.current(0)
     page._refresh()
     app.update()
-    check("the admin booking filters load", page.date_from is not None and page.date_to is not None)
+    check("the admin booking filters load",
+          len(page.table.tree.get_children()) >= 1,
+          len(page.table.tree.get_children()))
 
-    app.go("AdminReports")
-    app.update()
-    page = current_page(app)
-    page._run()
-    app.update()
-    page._copy_summary()
-    app.update()
-    check("the report summary can be copied", True)
-    booking_id = fresh["id"]
-    select_row(page, booking_id)
-    page._change("confirmed")
-    app.update()
-    check("the booking was confirmed",
-          booking_service.get_booking(booking_id)["status"] == "confirmed",
-          booking_service.get_booking(booking_id)["status"])
-    select_row(page, booking_id)
-    page._change("in_progress")
-    app.update()
-    check("the job was started",
-          booking_service.get_booking(booking_id)["status"] == "in_progress",
-          booking_service.get_booking(booking_id)["status"])
-    select_row(page, booking_id)
-    page._change("completed")
-    app.update()
-    check("the booking was completed",
-          booking_service.get_booking(booking_id)["status"] == "completed",
-          booking_service.get_booking(booking_id)["status"])
+    for status in ("confirmed", "in_progress", "completed"):
+        select_row(page, booking_id)
+        page._change(status)
+        app.update()
+        check(f"the booking is {status}",
+              booking_service.get_booking(booking_id)["status"] == status,
+              booking_service.get_booking(booking_id)["status"])
+
     select_row(page, booking_id)
     page._change("cancelled")
     app.update()
@@ -382,6 +457,22 @@ def check_admin_flow(app: CleanHomeApp, admin) -> None:
           len(page.table.tree.get_children()) == 1,
           len(page.table.tree.get_children()))
 
+
+def check_reports(app: CleanHomeApp) -> None:
+    print("the admin reports")
+    app.go("AdminReports")
+    app.update()
+    page = current_page(app)
+    page._run()
+    app.update()
+    check("the report table is filled", len(page.table_frame.winfo_children()) > 0)
+    page._copy_summary()
+    app.update()
+    check("the report summary can be copied",
+          "CleanHome revenue report" in app.clipboard_get())
+
+
+def check_admin_pages(app: CleanHomeApp) -> None:
     print("the admin customer and service screens")
     app.go("AdminCustomers")
     app.update()
@@ -396,6 +487,11 @@ def check_admin_flow(app: CleanHomeApp, admin) -> None:
     page._refresh()
     app.update()
     check("the services are listed", len(page.table.tree.get_children()) > 0)
+
+    app.go("AdminPromotions")
+    app.update()
+    page = current_page(app)
+    check("the promotions are listed", len(page.table.tree.get_children()) > 0)
 
 
 def check_accounts(app: CleanHomeApp) -> None:
@@ -465,15 +561,39 @@ def check_accounts(app: CleanHomeApp) -> None:
           auth_service.login("customer@test.ph", "NewPass456") is not None)
 
 
+def check_logout(app: CleanHomeApp, admin) -> None:
+    print("logging out")
+    app.sign_in(admin)
+    app.update()
+    check("the admin is signed in", app.session.role == "admin", app.session.role)
+
+    original = messagebox.askyesno
+    messagebox.askyesno = lambda *args, **kwargs: True
+    try:
+        app.logout()
+    finally:
+        messagebox.askyesno = original
+    app.update()
+    check("the session is cleared", not app.session.is_authenticated)
+    check("the guest lands on the home page", app.current == "Home", app.current)
+    check("the navigation bar shows the guest links",
+          find_button(app, "Log In") is not None)
+
+    app.go("AdminDashboard")
+    app.update()
+    check("the admin pages are closed to guests", app.current == "Login", app.current)
+
+
 def main() -> int:
     folder = fresh_database()
     try:
-        make_user("admin@test.ph", "admin")
         make_user("customer@test.ph", "customer",
                   address="12 Quezon Ave", phone="09171234567")
         app = CleanHomeApp()
         app.update()
         try:
+            check_first_run(app)
+            check_components(app)
             check_every_screen(app)
             admin = auth_service.login("admin@test.ph", PASSWORD)
             app.sign_in(admin)
@@ -486,7 +606,11 @@ def main() -> int:
             app.sign_in(admin)
             app.update()
             check_admin_flow(app, admin)
+            check_reports(app)
+            check_admin_pages(app)
+            check_forced_password_change(app)
             check_accounts(app)
+            check_logout(app, admin)
         finally:
             app.on_close()
     finally:

@@ -8,7 +8,7 @@ from cleanhome.services import ValidationError, auth_service
 from cleanhome.ui import components, templates
 
 
-class ChangePassword(templates.PageTemplate):
+class ChangePassword(templates.FormMixin, templates.PageTemplate):
     """Set a new password for the current account."""
 
     page_name = "Change Password"
@@ -55,8 +55,7 @@ class ChangePassword(templates.PageTemplate):
                                        ).pack(anchor="w", pady=(theme.SPACE_SM, 0))
 
     def _update(self) -> None:
-        for field in self._fields.values():
-            field.clear_error()
+        self.clear_form_errors()
         try:
             user = auth_service.change_password(
                 self.session.user,
@@ -65,11 +64,7 @@ class ChangePassword(templates.PageTemplate):
                 self.confirm.input.get(),
             )
         except ValidationError as error:
-            field = self._fields.get(error.field or "")
-            if field is not None:
-                field.set_error(str(error))
-            else:
-                self.app.flash(str(error), "error")
+            self.show_field_error(error)
             return
         self.app.session.sign_in(user)
         self.app.flash("Password updated.", "success")

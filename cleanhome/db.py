@@ -11,6 +11,7 @@ import re
 import sqlite3
 import threading
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 from typing import Any, Iterable, Iterator, Sequence
 
 from cleanhome import config
@@ -93,16 +94,6 @@ COLUMN_MIGRATIONS: tuple[tuple[str, str, str], ...] = (
     ("bookings", "cancel_reason", "TEXT"),
 )
 
-SEED_SERVICES: tuple[tuple[str, str, float, int], ...] = (
-    ("Standard Home Cleaning", "A complete clean for living rooms, bedrooms, kitchens and bathrooms.", 1299.00, 90),
-    ("Deep Cleaning", "Detailed top-to-bottom clean including buildup, degreasing and sanitising.", 2499.00, 180),
-    ("Move-in/Move-out Cleaning", "Empty-home deep clean ready for handover or a fresh tenant.", 2999.00, 240),
-    ("Kitchen Deep Cleaning", "Degreasing, descaling and polishing for all kitchen surfaces.", 999.00, 90),
-    ("Bathroom Deep Cleaning", "Scrubbing, descaling and sanitising for bathrooms and toilets.", 699.00, 60),
-    ("Sofa Cleaning", "Fabric sofa shampooing and stain treatment.", 799.00, 60),
-    ("Window Deep Wash", "Interior and exterior glass cleaning for a streak-free finish.", 899.00, 90),
-)
-
 
 def get_connection() -> sqlite3.Connection:
     """Return the shared SQLite connection, opening it on first use."""
@@ -119,7 +110,7 @@ def _open() -> sqlite3.Connection:
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA journal_mode = WAL")
-    connection.execute("PRAGMA busy_timeout = 5000")
+    connection.execute(f"PRAGMA busy_timeout = {config.DB_BUSY_TIMEOUT_MS}")
     return connection
 
 
@@ -229,7 +220,7 @@ def seed() -> None:
     """Insert the default service catalogue and promotions."""
     connection = get_connection()
     with _lock:
-        for name, description, price, duration in SEED_SERVICES:
+        for name, description, price, duration in config.SEED_SERVICES:
             connection.execute(
                 "INSERT OR IGNORE INTO services (name, description, price, duration_mins) "
                 "VALUES (?, ?, ?, ?)",
@@ -240,31 +231,21 @@ def seed() -> None:
 
 
 def _seed_promotions(connection: sqlite3.Connection) -> None:
-    """Insert the two starter promotions when the table is empty."""
+    """Insert the starter promotions when the table is empty."""
     existing = connection.execute("SELECT COUNT(*) AS n FROM promotions").fetchone()["n"]
     if existing:
         return
-    rows = [
-        ("Welcome 10% Off", "percent", 10.0, "2026-01-01 00:00:00", "2027-12-31 23:59:59"),
-        ("Save ₱200", "fixed", 200.0, "2026-01-01 00:00:00", "2027-12-31 23:59:59"),
-    ]
-    for title, discount_type, value, start, end in rows:
+    start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=config.SEED_PROMOTION_SPAN_DAYS)
+    for title, discount_type, value in config.SEED_PROMOTIONS:
         connection.execute(
             "INSERT INTO promotions (service_id, title, discount_type, discount_value, "
             "start_date, end_date, is_active) VALUES (NULL, ?, ?, ?, ?, ?, 1)",
-            (title, discount_type, value, start, end),
+            (title, discount_type, value,
+             start.strftime("%Y-%m-%d %H:%M:%S"),
+             end.strftime("%Y-%m-%d %H:%M:%S")),
         )
     connection.commit()
-
-
-def table_columns(table: str) -> set[str]:
-    """Return the column names of a table."""
-    return {row["name"] for row in query(f"PRAGMA table_info({table})")}
-
-
-def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
-    """Convert a row to a plain dict, or None if the row is None."""
-    return dict(row) if row is not None else None
 
 
 def rows_to_dicts(rows: Iterable[sqlite3.Row]) -> list[dict[str, Any]]:

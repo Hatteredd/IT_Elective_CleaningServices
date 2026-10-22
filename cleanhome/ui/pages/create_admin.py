@@ -9,7 +9,7 @@ from cleanhome.services import ConflictError, ServiceError, ValidationError, aut
 from cleanhome.ui import components, templates
 
 
-class CreateAdmin(templates.AuthTemplate):
+class CreateAdmin(templates.FormMixin, templates.AuthTemplate):
     """The setup screen shown once, when no administrator exists yet."""
 
     page_name = "Create Admin Account"
@@ -26,7 +26,7 @@ class CreateAdmin(templates.AuthTemplate):
         components.BodyLabel(
             inner, text="This computer has no administrator yet. Create the first "
                        "account to start managing services, bookings and customers.",
-            surface=True, wraplength=420, justify="left").pack(
+            surface=True, wraplength=theme.WRAP_FORM, justify="left").pack(
             anchor="w", pady=(theme.SPACE_XS, theme.SPACE_LG))
 
         self.full_name = components.FormField(inner, "Full name")
@@ -54,7 +54,7 @@ class CreateAdmin(templates.AuthTemplate):
                                   self.phone.input, self.password.input,
                                   self.confirm.input)
 
-        self.error_label = components.BodyLabel(inner, text="", wraplength=380,
+        self.error_label = components.BodyLabel(inner, text="", wraplength=theme.WRAP_FORM,
                                                 justify="left", surface=True)
         self.error_label.pack_forget()
 
@@ -68,33 +68,21 @@ class CreateAdmin(templates.AuthTemplate):
         self.full_name.focus_field()
 
     def _create(self) -> None:
-        self._clear_errors()
+        self.clear_form_errors()
         try:
             user = auth_service.create_first_admin(
                 self.full_name.get(), self.email.get(), self.phone.get(),
                 self.password.input.get(), self.confirm.input.get())
         except ValidationError as error:
-            field = self._fields.get(error.field or "")
-            if field is not None:
-                field.set_error(str(error))
-            else:
-                self._show_error(str(error))
+            self.show_field_error(error)
             return
         except ConflictError as error:
             self.app.flash(str(error), "error")
             self.app.go("Login")
             return
         except ServiceError as error:
-            self._show_error(str(error))
+            self.show_form_error(str(error))
             return
         self.app.sign_in(user)
         self.app.flash("Administrator account created.", "success")
 
-    def _show_error(self, message: str) -> None:
-        self.error_label.configure(text=message)
-        self.error_label.pack(anchor="w", pady=(0, theme.SPACE_SM))
-
-    def _clear_errors(self) -> None:
-        self.error_label.pack_forget()
-        for field in self._fields.values():
-            field.clear_error()

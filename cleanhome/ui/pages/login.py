@@ -9,7 +9,7 @@ from cleanhome.services import AuthError, ValidationError, auth_service
 from cleanhome.ui import components, templates
 
 
-class Login(templates.AuthTemplate):
+class Login(templates.FormMixin, templates.AuthTemplate):
     """Sign in with an email address and a password."""
 
     page_name = "Login"
@@ -30,12 +30,13 @@ class Login(templates.AuthTemplate):
         self.email.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.password = components.FormField(inner, "Password", secret=True)
         self.password.pack(fill="x", pady=(0, theme.SPACE_MD))
+        self._fields = {"email": self.email, "password": self.password}
         self.email.bind_return(self._sign_in)
         self.password.bind_return(self._sign_in)
         self.bind("<Return>", lambda event: self._sign_in())
         components.bind_tab_order(self.email.input, self.password.input)
 
-        self.error_label = components.BodyLabel(inner, text="", wraplength=380,
+        self.error_label = components.BodyLabel(inner, text="", wraplength=theme.WRAP_FORM,
                                                 justify="left", surface=True)
         self.error_label.pack_forget()
 
@@ -53,30 +54,17 @@ class Login(templates.AuthTemplate):
         self.email.focus_field()
 
     def _sign_in(self) -> None:
-        self._clear_errors()
+        self.clear_form_errors()
         email = self.email.get()
         password = self.password.input.get()
         try:
             user = auth_service.login(email, password)
         except ValidationError as error:
-            if error.field == "email":
-                self.email.set_error(str(error))
-            elif error.field == "password":
-                self.password.set_error(str(error))
-            else:
-                self._show_error(str(error))
+            self.show_field_error(error)
             return
         except AuthError as error:
-            self._show_error(str(error))
+            self.show_form_error(str(error))
             return
         self.app.sign_in(user)
         self.app.flash(f"Welcome back, {user['full_name'].split(' ')[0]}.", "success")
 
-    def _show_error(self, message: str) -> None:
-        self.error_label.configure(text=message)
-        self.error_label.pack(anchor="w", pady=(0, theme.SPACE_SM))
-
-    def _clear_errors(self) -> None:
-        self.error_label.pack_forget()
-        self.email.clear_error()
-        self.password.clear_error()

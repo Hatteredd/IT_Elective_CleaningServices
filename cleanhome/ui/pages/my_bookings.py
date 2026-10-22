@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-import tkinter as tk
+from tkinter import ttk
 
-from cleanhome import theme, utils
+from cleanhome import theme
 from cleanhome.services import ServiceError, booking_service, catalog_service
 from cleanhome.ui import components, templates
-from tkinter import ttk
+
+TABS = (("Upcoming", None), ("Pending", "pending"), ("Confirmed", "confirmed"),
+        ("Completed", "completed"), ("Cancelled", "cancelled"))
 
 
 class MyBookings(templates.PageTemplate):
     """List, cancel, or reschedule the customer's bookings."""
 
     page_name = "My Bookings"
-    required_role = "customer"
 
     def build(self, **kwargs) -> None:
         super().build(**kwargs)
@@ -28,9 +29,7 @@ class MyBookings(templates.PageTemplate):
         tabs.pack(fill="both", expand=True, pady=(theme.SPACE_LG, 0))
 
         self.frames = {}
-        for label, status in (("Upcoming", None), ("Pending", "pending"),
-                              ("Confirmed", "confirmed"), ("Completed", "completed"),
-                              ("Cancelled", "cancelled")):
+        for label, _status in TABS:
             frame = ttk.Frame(tabs)
             tabs.add(frame, text=label)
             self.frames[label] = frame
@@ -38,10 +37,8 @@ class MyBookings(templates.PageTemplate):
 
     def _render_all(self) -> None:
         user_id = self.session.user["id"]
-        for label, status in (("Upcoming", None), ("Pending", "pending"),
-                              ("Confirmed", "confirmed"), ("Completed", "completed"),
-                              ("Cancelled", "cancelled")):
-            if label == "Upcoming":
+        for label, status in TABS:
+            if status is None:
                 bookings = [b for b in booking_service.list_bookings_for_user(user_id)
                             if b["status"] in ("pending", "confirmed", "in_progress")]
             else:
@@ -64,39 +61,12 @@ class MyBookings(templates.PageTemplate):
                                            ).pack(anchor="w", padx=theme.SPACE_MD)
             return
         for booking in bookings:
-            card = templates.card(frame)
-            card.pack(fill="x", padx=theme.SPACE_MD, pady=(theme.SPACE_MD, 0))
-            inner = templates.card_body(card)
-            inner.grid_columnconfigure(0, weight=1)
-
-            top = tk.Frame(inner, bg=theme.BG_SURFACE)
-            top.grid(row=0, column=0, sticky="ew")
-            components.SubheadingLabel(top, text=booking["service_name"], surface=True).pack(side="left")
-            components.Badge(top, components.booking_service_label(booking["status"]),
-                             booking["status"]).pack(side="left", padx=theme.SPACE_SM)
-            components.PriceLabel(top, text=utils.format_peso(booking["total_at_booking"]), surface=True).pack(side="right")
-
-            info = tk.Frame(inner, bg=theme.BG_SURFACE)
-            info.grid(row=1, column=0, sticky="ew", pady=(theme.SPACE_XS, 0))
-            components.BodyLabel(info, text=utils.format_datetime(booking.get("scheduled_at")), surface=True).pack(anchor="w")
-            components.CaptionLabel(info, text=booking.get("address", ""),
-                     wraplength=800, justify="left", surface=True).pack(anchor="w")
-            if booking.get("notes"):
-                components.CaptionLabel(info, text=f"Notes: {booking['notes']}",
-                         wraplength=800, justify="left", surface=True).pack(anchor="w")
-            if booking.get("cancel_reason"):
-                components.CaptionLabel(info, text=f"Cancellation reason: {booking['cancel_reason']}", wraplength=800,
-                         justify="left", surface=True).pack(anchor="w")
-
-            actions = tk.Frame(inner, bg=theme.BG_SURFACE)
-            actions.grid(row=2, column=0, sticky="e", pady=(theme.SPACE_MD, 0))
-            if booking["status"] in ("pending", "confirmed"):
-                components.SecondaryButton(actions, "Reschedule",
-                                           command=lambda b=booking: self._reschedule(b)
-                                           ).pack(side="left", padx=(0, theme.SPACE_SM))
-                components.DangerButton(actions, "Cancel",
-                                        command=lambda b=booking: self._cancel(b)
-                                        ).pack(side="left")
+            can_change = booking["status"] in ("pending", "confirmed")
+            components.BookingRow(
+                frame, booking,
+                on_reschedule=(lambda b=booking: self._reschedule(b)) if can_change else None,
+                on_cancel=(lambda b=booking: self._cancel(b)) if can_change else None,
+            ).pack(fill="x", padx=theme.SPACE_MD, pady=(theme.SPACE_MD, 0))
 
     def _cancel(self, booking: dict) -> None:
         components.CancelDialog(
