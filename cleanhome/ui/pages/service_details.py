@@ -45,10 +45,29 @@ class ServiceDetails(templates.PageTemplate):
                                  justify="left", surface=True).pack(anchor="w",
                                                                   pady=(theme.SPACE_MD, 0))
 
+        inclusions = (service.get("inclusions") or "").strip()
+        if inclusions:
+            components.CaptionLabel(inner, text="Inclusions", surface=True).pack(
+                anchor="w", pady=(theme.SPACE_MD, theme.SPACE_XS))
+            inc = tk.Frame(inner, bg=theme.BG_SURFACE)
+            inc.pack(fill="x")
+            for line in inclusions.replace("\r\n", "\n").split("\n"):
+                line = line.strip()
+                if not line:
+                    continue
+                row = tk.Frame(inc, bg=theme.BG_SURFACE)
+                row.pack(fill="x", anchor="w")
+                tk.Label(row, text="•", bg=theme.BG_SURFACE, fg=theme.PRIMARY,
+                         font=theme.font("BODY")).pack(side="left")
+                components.BodyLabel(row, text=line, wraplength=theme.WRAP_SECTION,
+                                     justify="left", surface=True).pack(
+                    side="left", padx=(theme.SPACE_SM, 0))
+            tk.Frame(inner, bg=theme.BG_SURFACE).pack(pady=(theme.SPACE_SM, 0))
+
         promo = catalog_service.applicable_promotion(service["id"], datetime.now())
         if promo:
             promo_row = tk.Frame(inner, bg=theme.BG_SURFACE)
-            promo_row.pack(anchor="w", fill="x", pady=(0, theme.SPACE_MD))
+            promo_row.pack(anchor="w", fill="x", pady=(theme.SPACE_MD, 0))
             components.SubheadingLabel(promo_row, text=promo["title"], surface=True).pack(
                 side="left")
             components.BodyLabel(promo_row, text=utils.format_discount(promo),

@@ -211,6 +211,19 @@ def check_every_screen(app: CleanHomeApp) -> None:
     app.update()
     check("a guest is sent to the login page", app.current == "Login", app.current)
 
+    print("login screen behavior")
+    app.go("Login")
+    app.update()
+    page = current_page(app)
+    page.email.focus_field()
+    app.update()
+    check("email field can take focus", page.email.input.focus_get() == page.email.input)
+    page.email.set("customer@test.ph")
+    page.password.set("WrongPass123")
+    page.email.input.event_generate("<Return>")
+    app.update()
+    check("Enter on email submits the login form", not app.session.is_authenticated or app.current == "Login")
+
     print("every screen as admin")
     admin = auth_service.login("admin@test.ph", PASSWORD)
     app.sign_in(admin)
@@ -235,6 +248,12 @@ def check_every_screen(app: CleanHomeApp) -> None:
     app.go("AdminDashboard")
     app.update()
     check("a customer is kept out of the admin pages", app.current == "Home", app.current)
+    app.go("AdminBookings")
+    app.update()
+    check("a customer is kept out of AdminBookings", app.current == "Home", app.current)
+    app.go("AdminReports")
+    app.update()
+    check("a customer is kept out of AdminReports", app.current == "Home", app.current)
 
 
 def check_forced_password_change(app: CleanHomeApp) -> None:

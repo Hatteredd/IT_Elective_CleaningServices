@@ -136,6 +136,8 @@ class ServiceForm(components.FormDialog):
         self.name.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.description = components.FormField(self.body, "Description")
         self.description.pack(fill="x", pady=(0, theme.SPACE_MD))
+        self.inclusions = components.FormField(self.body, "Inclusions")
+        self.inclusions.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.price = components.FormField(self.body, "Price (₱)")
         self.price.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.duration = components.FormField(self.body, "Duration (minutes)")
@@ -143,6 +145,7 @@ class ServiceForm(components.FormDialog):
         self._fields = {
             "name": self.name,
             "description": self.description,
+            "inclusions": self.inclusions,
             "price": self.price,
             "duration_mins": self.duration,
         }
@@ -150,6 +153,7 @@ class ServiceForm(components.FormDialog):
         if service:
             self.name.set(service["name"])
             self.description.set(service["description"] or "")
+            self.inclusions.set(service.get("inclusions") or "")
             self.price.set(str(service["price"]))
             self.duration.set(str(service["duration_mins"]))
 
@@ -168,11 +172,13 @@ class ServiceForm(components.FormDialog):
         try:
             if self.service is None:
                 catalog_service.create_service(
-                    self.actor, self.name.get(), self.description.get(), price, duration)
+                    self.actor, self.name.get(), self.description.get(), price, duration,
+                    inclusions=self.inclusions.get())
             else:
                 catalog_service.update_service(
                     self.actor, self.service["id"], self.name.get(),
-                    self.description.get(), price, duration)
+                    self.description.get(), price, duration,
+                    inclusions=self.inclusions.get())
         except ServiceError as error:
             self.show_field_error(error)
             return

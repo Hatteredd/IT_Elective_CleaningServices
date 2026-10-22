@@ -32,7 +32,9 @@ Thumbs.db
 *.db-wal
 *.db-shm
 app.log
+cleanhome.db
+cleanhome.db-shm
+cleanhome.db-wal
 
 # Pre-rewrite backup of the original project
 backup_original/
-cleanhome.db

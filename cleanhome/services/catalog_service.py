@@ -9,7 +9,7 @@ from typing import Any
 from cleanhome import config, db, utils
 from cleanhome.services import ConflictError, ValidationError, require_admin
 
-SERVICE_COLUMNS = "id, name, description, price, duration_mins, is_active, created_at"
+SERVICE_COLUMNS = "id, name, description, price, duration_mins, is_active, created_at, inclusions"
 PROMOTION_COLUMNS = (
     "id, service_id, title, discount_type, discount_value, start_date, end_date, is_active"
 )
@@ -20,6 +20,7 @@ def _service_row(row) -> dict[str, Any]:
     data["price"] = utils.to_decimal(data.get("price"))
     data["duration_mins"] = int(data.get("duration_mins") or 0)
     data["is_active"] = bool(data.get("is_active"))
+    data["inclusions"] = data.get("inclusions") or ""
     return data
 
 
@@ -51,24 +52,26 @@ def featured_services(limit: int = config.FEATURED_SERVICE_COUNT) -> list[dict[s
 
 
 def create_service(actor: dict[str, Any], name: str, description: str,
-                   price: float, duration_mins: int) -> dict[str, Any]:
+                   price: float, duration_mins: int, inclusions: str = "") -> dict[str, Any]:
     """Add a service to the catalogue."""
     require_admin(actor)
     clean = _validate_service_fields(name, description, price, duration_mins)
+    inclusions_clean = (inclusions or "").strip()
     if db.query_one("SELECT id FROM services WHERE name = ? COLLATE NOCASE", (clean["name"],)):
         raise ConflictError("A service with that name already exists.")
     cursor = db.execute(
-        "INSERT INTO services (name, description, price, duration_mins) VALUES (?, ?, ?, ?)",
-        (clean["name"], clean["description"], float(clean["price"]), clean["duration_mins"]),
+        "INSERT INTO services (name, description, price, duration_mins, inclusions) VALUES (?, ?, ?, ?, ?)",
+        (clean["name"], clean["description"], float(clean["price"]), clean["duration_mins"], inclusions_clean),
     )
     return get_service(int(cursor.lastrowid)) or {}
 
 
 def update_service(actor: dict[str, Any], service_id: int, name: str,
-                   description: str, price: float, duration_mins: int) -> dict[str, Any]:
+                   description: str, price: float, duration_mins: int, inclusions: str = "") -> dict[str, Any]:
     """Edit an existing service."""
     require_admin(actor)
     clean = _validate_service_fields(name, description, price, duration_mins)
+    inclusions_clean = (inclusions or "").strip()
     clash = db.query_one(
         "SELECT id FROM services WHERE name = ? COLLATE NOCASE AND id != ?",
         (clean["name"], service_id),
@@ -76,9 +79,9 @@ def update_service(actor: dict[str, Any], service_id: int, name: str,
     if clash:
         raise ConflictError("A service with that name already exists.")
     db.execute(
-        "UPDATE services SET name = ?, description = ?, price = ?, duration_mins = ? WHERE id = ?",
+        "UPDATE services SET name = ?, description = ?, price = ?, duration_mins = ?, inclusions = ? WHERE id = ?",
         (clean["name"], clean["description"], float(clean["price"]), clean["duration_mins"],
-         service_id),
+         inclusions_clean, service_id),
     )
     return get_service(service_id) or {}
 

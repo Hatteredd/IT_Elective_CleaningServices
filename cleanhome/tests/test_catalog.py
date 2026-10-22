@@ -77,6 +77,16 @@ class ServiceRuleTests(ServiceTestCase):
         restored = catalog_service.restore_service(self.admin, service["id"])
         self.assertTrue(restored["is_active"])
 
+    def test_service_inclusions_persist(self) -> None:
+        service = catalog_service.create_service(self.admin, "Deep Clean", "Top to bottom",
+                                                 2500.0, 180, inclusions="Dusting\nMopping")
+        fetched = catalog_service.get_service(service["id"])
+        self.assertIn("Dusting", fetched.get("inclusions", ""))
+        updated = catalog_service.update_service(self.admin, service["id"], "Deep Clean",
+                                                  "Top to bottom", 2500.0, 180,
+                                                  inclusions="Windows")
+        self.assertIn("Windows", updated.get("inclusions", ""))
+
 
 class PromotionRuleTests(ServiceTestCase):
     """Promotion validation and the one-promo-only rule."""

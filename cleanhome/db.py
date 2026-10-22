@@ -92,6 +92,7 @@ COLUMN_MIGRATIONS: tuple[tuple[str, str, str], ...] = (
     ("users", "locked_until", "TEXT"),
     ("users", "must_change_password", "INTEGER NOT NULL DEFAULT 0"),
     ("bookings", "cancel_reason", "TEXT"),
+    ("services", "inclusions", "TEXT DEFAULT ''"),
 )
 
 

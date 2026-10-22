@@ -303,3 +303,9 @@ All probes were run against a **temporary copy** of the database; `instance/app.
 ---
 
 **Phase 0 ends here. No application code has been changed. Awaiting approval to begin Phase 1.**
+
+
+## 2026-10-22 Updates
+- Migrated inclusions column; added to forms and service details.
+- UI harness extended and passing.
+- Credentials scrubbed; first-run uses Create Admin Account screen.
