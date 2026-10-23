@@ -1,0 +1,151 @@
+﻿the first-run setup screen
+  ok    the app opens on the setup screen
+  ok    a weak first password is refused
+  ok    the first admin was created
+  ok    the admin lands on the dashboard
+  ok    the setup screen refuses to reopen once an admin exists
+the reusable components
+  ok    a password starts hidden
+  ok    the reveal toggle shows the text
+  ok    the reveal toggle hides the text again
+  ok    the toggle flips and calls back
+  ok    a checkbox waits to be placed
+  ok    a checkbox places its frame
+  ok    the checkbox flips
+  ok    a form input sits above its focus ring
+  ok    the search box starts empty
+  ok    the search input sits above its focus ring
+  ok    clear empties the search box
+  ok    the chart draws its bars
+  ok    the ranking shows the service
+  ok    the toast appears
+  ok    the toast hides
+every screen as guest
+  ok    guest can open Home
+  ok    every block on Home is laid out
+  ok    guest can open Services
+  ok    guest can open Promotions
+  ok    guest can open About
+  ok    every block on About is laid out
+  ok    guest can open Contact
+  ok    guest can open Login
+  ok    guest can open Signup
+  ok    guest can open ServiceDetails
+  ok    a guest is sent to the login page
+login screen behavior
+  ok    email field can take focus
+  ok    the login screen has no role selector
+  ok    Enter on email submits the login form
+every screen as admin
+  ok    admin can open AdminDashboard
+  ok    every block on Dashboard is laid out
+  ok    admin can open AdminBookings
+  ok    admin can open AdminServices
+  ok    admin can open AdminPromotions
+  ok    admin can open AdminCustomers
+  ok    admin can open AdminReports
+  ok    admin can open Profile
+  ok    admin can open ChangePassword
+  ok    admin can open Home
+  ok    the admin sees no Book Now on Home
+  ok    every block on Home is laid out
+  ok    admin can open Services
+  ok    the admin sees no Book Now on Services
+  ok    admin can open Promotions
+  ok    the admin sees no Book Now on Promotions
+  ok    admin can open About
+  ok    the admin sees no Book Now on About
+  ok    every block on About is laid out
+  ok    admin can open Contact
+  ok    the admin sees no Book Now on ServiceDetails
+every screen as customer
+  ok    customer can open Book
+  ok    customer can open MyBookings
+  ok    customer can open Profile
+  ok    customer can open ChangePassword
+  ok    customer can open Home
+  ok    every block on Home is laid out
+  ok    customer can open Services
+  ok    a customer is kept out of the admin pages
+  ok    a customer is kept out of AdminBookings
+  ok    a customer is kept out of AdminReports
+the admin dialogs
+  ok    the promotion form opens
+  ok    the promotion form fits on screen
+  ok    the start date defaults to today
+  ok    the end date defaults a month out
+  ok    the promotion was saved
+  ok    the promotion form closes after saving
+  ok    the saved start uses the picked date and time
+  ok    the service was saved
+  ok    the add admin dialog opens
+  ok    archiving asks for confirmation
+  ok    the service was archived
+  ok    the service was restored
+the customer booking flow
+  ok    the service list is filled
+  ok    slots are offered for a chosen day
+  ok    the summary shows the service
+  ok    the summary shows the date
+  ok    the summary shows the time
+  ok    the summary shows the address
+  ok    the price breakdown shows the discount
+  ok    the price is quoted
+  ok    the booking was created
+  ok    the customer lands on My Bookings
+  ok    the home page shows the next cleaning
+  ok    every block on Home is laid out
+  ok    the booking is listed
+  ok    the booking was rescheduled
+  ok    the reschedule dialog closed
+  ok    the booking was cancelled
+  ok    the cancel dialog closed
+the admin booking flow
+  ok    the admin booking filters load
+  ok    the booking is confirmed
+  ok    the booking is in_progress
+  ok    the booking is completed
+  ok    a completed booking cannot be cancelled again
+  ok    the filter keeps the completed booking
+the admin reports
+  ok    the report table is filled
+  ok    the report summary can be copied
+the admin customer and service screens
+  ok    the customers are listed
+  ok    the services are listed
+  ok    the promotions are listed
+layout at 100%, 125% and 150% scaling
+  ok    the home page renders at 100%
+  ok    the footer is present at 100%
+  ok    the footer stays compact at 100%
+  ok    the footer reaches the page bottom at 100%
+  ok    the home page renders at 125%
+  ok    the footer is present at 125%
+  ok    the footer stays compact at 125%
+  ok    the footer reaches the page bottom at 125%
+  ok    the home page renders at 150%
+  ok    the footer is present at 150%
+  ok    the footer stays compact at 150%
+  ok    the footer reaches the page bottom at 150%
+a generated password must be changed at first sign-in
+  ok    the forced user is sent to ChangePassword
+  ok    the forced screen hides the back link
+  ok    the forced user reaches the home page after the change
+  ok    the flag is cleared
+sign-up, sign-in, profile and password
+  ok    the new customer is signed in
+  ok    the new account exists
+  ok    a weak password is refused
+  ok    a wrong password is refused
+  ok    the error is shown
+  ok    the profile was saved
+  ok    the phone was saved
+  ok    the new password works
+logging out
+  ok    the admin is signed in
+  ok    the session is cleared
+  ok    the guest lands on the home page
+  ok    the navigation bar shows the guest links
+  ok    the admin pages are closed to guests
+
+FAILURES: none
