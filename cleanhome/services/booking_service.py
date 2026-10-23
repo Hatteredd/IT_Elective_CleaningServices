@@ -101,6 +101,18 @@ def list_bookings_for_user(user_id: int, status: str | None = None) -> list[dict
     return [_row_to_booking(row) for row in rows]
 
 
+def next_booking_for_user(user_id: int) -> dict[str, Any] | None:
+    """Return this customer's next open booking, or None."""
+    row = db.query_one(
+        f"SELECT {BOOKING_COLUMNS} {_JOIN} "
+        "WHERE b.user_id = ? AND b.status IN ('pending', 'confirmed', 'in_progress') "
+        "AND datetime(b.scheduled_at) >= datetime('now') "
+        "ORDER BY b.scheduled_at LIMIT 1",
+        (user_id,),
+    )
+    return _row_to_booking(row) if row else None
+
+
 def list_all_bookings(actor: dict[str, Any] | None, status: str | None = None,
                       search: str = "", date_from: date | None = None,
                       date_to: date | None = None) -> list[dict[str, Any]]:

@@ -8,6 +8,7 @@ import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from cleanhome import config
 from cleanhome.services import (PermissionDenied, ValidationError, booking_service,
                                 catalog_service, report_service)
 from cleanhome.tests.base import ServiceTestCase
@@ -180,6 +181,22 @@ class ReportTests(ServiceTestCase):
         self.assertEqual(stats["pending_bookings"], 1)
         self.assertEqual(stats["active_customers"], 1)
         self.assertGreaterEqual(stats["active_services"], 1)
+
+    def test_the_dashboard_returns_the_trend_and_the_rankings(self) -> None:
+        stats = report_service.dashboard_stats(self.admin)
+        self.assertEqual(len(stats["monthly_revenue"]),
+                         config.DASHBOARD_TREND_MONTHS)
+        self.assertTrue(all(month["label"] for month in stats["monthly_revenue"]))
+        self.assertEqual(stats["status_counts"].get("pending"), 1)
+        self.assertGreaterEqual(stats["bookings_this_month"], 0)
+        self.assertEqual(stats["top_services"][0]["service_name"], "Standard Clean")
+        self.assertEqual(stats["top_services"][0]["bookings"], 1)
+
+        for status in ("confirmed", "in_progress", "completed"):
+            booking_service.change_status(self.admin, self.booking["id"], status)
+        stats = report_service.dashboard_stats(self.admin)
+        self.assertEqual(stats["status_counts"].get("completed"), 1)
+        self.assertEqual(float(stats["top_services"][0]["revenue"]), 1000.0)
 
     def test_the_revenue_report_ignores_unfinished_bookings(self) -> None:
         start = datetime.now() - timedelta(days=1)

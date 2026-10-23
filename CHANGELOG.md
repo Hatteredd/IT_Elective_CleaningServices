@@ -7,10 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
-* **Backups.** `db.backup_database()` uses SQLite's online backup API. The
-  admin dashboard has a **Back up database now** button, and
-  `python -m cleanhome.backup` writes a timestamped copy from the console.
-  Both write to `backups/` inside the data folder.
+* **Backups.** `db.backup_database()` uses SQLite's online backup API.
+  `CleanHomeTools.exe backup` and `python -m cleanhome.backup` write a
+  timestamped copy to `backups/` inside the data folder.
 * **`CleanHomeTools.exe`** — a console companion for the packaged app with
   `backup` and `reset-password` commands (`cleanhome/tools.py`).
 * **Data folder for the packaged app.** A frozen build now writes the
@@ -26,13 +25,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   backups, and data paths.
 * The UI harness now checks the weak-password refusal, the absent login role
   selector, the booking summary (service/date/time/address/price/discount),
-  the hidden admin **Book Now** buttons, the dashboard backup, and layout at
-  100/125/150% scaling including the footer.
+  the hidden admin **Book Now** buttons, the chart and ranking components,
+  and layout at 100/125/150% scaling including the footer.
+* **Dashboard charts.** `BarChart` draws the six-month completed-revenue
+  trend on a canvas and `RankingList` shows the top services by revenue.
+  `dashboard_stats()` now returns `bookings_this_month`, `status_counts`,
+  `monthly_revenue`, and `top_services`.
+* **Home next booking.** A customer with an open booking sees a card with the
+  service, date, address, price, status, and shortcuts to their bookings.
+  `booking_service.next_booking_for_user()` supplies the record.
+* **Home starting price** in the hero facts, from the cheapest active service.
 * `build_exe.bat` now builds one-file `CleanHomePH.exe` and
   `CleanHomeTools.exe` with `--paths`.
 
 ### Changed
 
+* The admin dashboard now leads with four KPI cards (revenue, bookings this
+  month, pending, active customers), then the revenue trend and service
+  ranking, followed by upcoming bookings. The Data safety panel was removed;
+  backups remain available through `CleanHomeTools.exe` and the console.
+* The Book form labels the address and notes through `FormField`, so the
+  duplicate outer captions are gone.
+* The services screen no longer shows the redundant **Active in catalogue**
+  toggle; **Archive/Restore** remains the single action.
 * The booking summary now includes the chosen time and always shows a
   discount line, including `-₱0.00` when no promotion applies.
 * Administrators no longer see **Book Now** (or other booking calls to
@@ -48,6 +63,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
+* Text fields were stacked beneath their focus ring, so the ring's white
+  background covered the input: typed text was invisible and clicks never
+  reached the field on Login, the Services search, and every form.
+  `InputRing` now lifts its input above the ring.
+* `templates.section()` built its frame but never packed it into the page, so
+  every section below the hero was invisible on Home, About, and the admin
+  dashboard.
+* `CheckBox` packed its outer frame through the overridden `pack()` while it
+  was still building itself, so one checkbox joined the parent layout early
+  and pushed later fields sideways (Book address and notes). The internal
+  canvas now calls `tk.Canvas.pack` directly.
 * `main.py` and `components.py` no longer use `except Exception`; the
   handlers now catch the exceptions they actually expect.
 * `report_service.py` dropped an unused `datetime` import.
@@ -59,9 +85,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Verification
 
-* `python -m unittest discover -s cleanhome/tests -t .` — 122 tests, OK.
+* `python -m unittest discover -s cleanhome/tests -t .` — 125 tests, OK.
 * `python -m cleanhome.tests.ui.harness` — every scenario passes, including
-  the new backup and scaling checks.
+  the new chart, ranking, next-booking, and scaling checks.
 
 ## [Unreleased] — 22 October 2026: UI cleanup and verification
 

@@ -17,7 +17,7 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from tkinter import messagebox
 
-from cleanhome import config, db, security, utils
+from cleanhome import config, db, security, theme, utils
 from cleanhome.services import auth_service, booking_service, catalog_service
 from cleanhome.ui import components
 from cleanhome.ui.app import CleanHomeApp
@@ -41,6 +41,14 @@ def check(label: str, condition: bool, detail: object = "") -> None:
 def current_page(app: CleanHomeApp):
     app.update()
     return app.container.winfo_children()[0]
+
+
+def check_layout(app: CleanHomeApp) -> None:
+    page = current_page(app)
+    blocks = [child for child in page.body.winfo_children()
+              if isinstance(child, tk.Frame) and child.cget("bg") == theme.BG_PAGE]
+    pending = [child for child in blocks if not child.winfo_manager()]
+    check(f"every block on {page.page_name} is laid out", not pending, pending)
 
 
 def find_button(root, text: str):
@@ -129,6 +137,17 @@ def widget_classes(root) -> set[str]:
     return classes
 
 
+def widget_text(root) -> str:
+    """Every text option under a widget, joined together."""
+    try:
+        texts = [str(root.cget("text"))]
+    except tk.TclError:
+        texts = []
+    for child in root.winfo_children():
+        texts.append(widget_text(child))
+    return " ".join(texts)
+
+
 def open_day(page, start: int = 4, days: int = 7) -> date | None:
     """Pick the first day in the next week that has open slots."""
     for offset in range(start, start + days):
@@ -191,16 +210,42 @@ def check_components(app: CleanHomeApp) -> None:
     check("the toggle flips and calls back", bool(toggle.variable.get()) and pressed)
 
     box = components.CheckBox(host, text="Remember me")
+    check("a checkbox waits to be placed", box._frame.winfo_manager() == "")
     box.pack()
+    check("a checkbox places its frame", box._frame.winfo_manager() == "pack")
     box._toggle()
     check("the checkbox flips", bool(box.variable.get()))
+
+    field = components.FormField(host, "Email")
+    field.pack()
+    siblings = field.input.master.winfo_children()
+    check("a form input sits above its focus ring",
+          siblings.index(field.input) > siblings.index(field._ring))
 
     search = components.SearchBar(host, placeholder="Search", on_change=lambda value: None)
     search.pack()
     check("the search box starts empty", search.get() == "", search.get())
+    siblings = search.input.master.winfo_children()
+    check("the search input sits above its focus ring",
+          siblings.index(search.input) > siblings.index(search._ring))
     search.set("abc")
     search.clear()
     check("clear empties the search box", search.get() == "", search.get())
+
+    window = tk.Toplevel(app)
+    window.geometry("400x300")
+    chart = components.BarChart(window, ["Jan", "Feb"], [1000, 2500])
+    chart.pack(fill="both", expand=True)
+    window.update()
+    check("the chart draws its bars", len(chart.canvas.find_all()) > 0,
+          f"{chart.canvas.winfo_width()}x{chart.canvas.winfo_height()} "
+          f"items={len(chart.canvas.find_all())}")
+    window.destroy()
+
+    ranking = components.RankingList(
+        host, [{"label": "Deep Clean", "caption": "2 bookings", "value": 2000}])
+    ranking.pack(fill="x")
+    check("the ranking shows the service", "Deep Clean" in widget_text(ranking))
 
     toast = components.Toast(app, app)
     toast.show("hello", "success")
@@ -217,6 +262,8 @@ def check_every_screen(app: CleanHomeApp) -> None:
         app.go(name)
         app.update()
         check(f"guest can open {name}", app.current == name, app.current)
+        if name in ("Home", "About"):
+            check_layout(app)
 
     service_id = db.query_one("SELECT id FROM services WHERE is_active = 1 LIMIT 1")["id"]
     app.go("ServiceDetails", service_id=service_id)
@@ -262,6 +309,8 @@ def check_every_screen(app: CleanHomeApp) -> None:
         if name in ("Home", "Services", "Promotions", "About"):
             check(f"the admin sees no Book Now on {name}",
                   find_button(app, "Book Now") is None)
+        if name in ("AdminDashboard", "Home", "About"):
+            check_layout(app)
 
     service_id = db.query_one("SELECT id FROM services WHERE is_active = 1 LIMIT 1")["id"]
     app.go("ServiceDetails", service_id=service_id)
@@ -278,6 +327,8 @@ def check_every_screen(app: CleanHomeApp) -> None:
         app.go(name)
         app.update()
         check(f"customer can open {name}", app.current == name, app.current)
+        if name == "Home":
+            check_layout(app)
 
     app.go("AdminDashboard")
     app.update()
@@ -371,7 +422,6 @@ def check_dialogs(app: CleanHomeApp, admin) -> None:
         app.update()
         page = current_page(app)
         select_row(page, service["id"])
-        page.active_toggle.variable.set(False)
         page._toggle()
         app.update()
         check("archiving asks for confirmation", len(find_dialogs(app)) == 1,
@@ -381,7 +431,6 @@ def check_dialogs(app: CleanHomeApp, admin) -> None:
         check("the service was archived",
               not catalog_service.get_service(service["id"])["is_active"])
         select_row(page, service["id"])
-        page.active_toggle.variable.set(True)
         page._toggle()
         app.update()
         check("the service was restored",
@@ -419,6 +468,14 @@ def check_booking_flow(app: CleanHomeApp, customer) -> None:
     after = len(booking_service.list_bookings_for_user(customer["id"]))
     check("the booking was created", after == before + 1, f"{before} -> {after}")
     check("the customer lands on My Bookings", app.current == "MyBookings", app.current)
+
+    app.go("Home")
+    app.update()
+    check("the home page shows the next cleaning",
+          "YOUR NEXT CLEANING" in widget_text(current_page(app)))
+    check_layout(app)
+    app.go("MyBookings")
+    app.update()
 
     page = current_page(app)
     check("the booking is listed", len(page.frames["Upcoming"].winfo_children()) > 0)
@@ -553,22 +610,6 @@ def check_admin_pages(app: CleanHomeApp) -> None:
     app.update()
     page = current_page(app)
     check("the promotions are listed", len(page.table.tree.get_children()) > 0)
-
-
-def check_backup(app: CleanHomeApp) -> None:
-    print("the admin data-safety action")
-    app.go("AdminDashboard")
-    app.update()
-    before = set(config.BACKUP_DIR.glob("cleanhome-*.db")) if config.BACKUP_DIR.exists() else set()
-    button = find_button(app, "Back up database now")
-    check("the dashboard has a backup button", button is not None)
-    if button is None:
-        return
-    button.invoke()
-    app.update()
-    after = set(config.BACKUP_DIR.glob("cleanhome-*.db"))
-    check("the backup button writes a database copy", len(after) == len(before) + 1,
-          f"{len(before)} -> {len(after)}")
 
 
 def check_scaling(app: CleanHomeApp) -> None:
@@ -713,7 +754,6 @@ def main() -> int:
             check_admin_flow(app, admin)
             check_reports(app)
             check_admin_pages(app)
-            check_backup(app)
             check_scaling(app)
             check_forced_password_change(app)
             check_accounts(app)

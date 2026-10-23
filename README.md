@@ -58,11 +58,9 @@ installed under `Program Files` or on a read-only drive.
 
 ## Backups
 
-Administrators can press **Back up database now** on the dashboard. A copy is
-written to the backup folder shown on that panel, named
+Run `CleanHomeTools.exe backup`, or from source `python -m cleanhome.backup`.
+A copy is written to the backup folder, named
 `cleanhome-YYYYMMDD-HHMMSS.db`.
-
-From source you can also back up without opening the app:
 
 ```
 python -m cleanhome.backup
@@ -110,7 +108,7 @@ python -m cleanhome.tests.ui.harness
 ```
 
 The first command runs the logic tests. The second opens a real window and
-walks every screen, dialog, booking flow, admin flow, report, backup button,
+walks every screen, dialog, booking flow, admin flow, report,
 and 100/125/150% scaling; it needs a desktop session.
 
 ## Build the Windows executables

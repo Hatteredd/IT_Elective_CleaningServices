@@ -5,7 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 
 from cleanhome import config, theme, utils
-from cleanhome.services import catalog_service
+from cleanhome.services import booking_service, catalog_service
 from cleanhome.ui import components, templates
 
 
@@ -48,17 +48,30 @@ class Home(templates.PageTemplate):
         facts.grid(row=0, column=1, sticky="nsew", padx=(theme.SPACE_LG, 0))
         services = catalog_service.list_services()
         areas = [area.strip() for area in config.SERVICE_AREAS.split(",") if area.strip()]
-        for label, value in (
+        facts_list = [
             ("Services in the catalogue", str(len(services))),
             ("Cities we cover", str(len(areas))),
             ("Booking hours", utils.business_hours()),
-            ("Free cancellation", f"up to {config.CANCEL_CUTOFF_HOURS} hours before"),
-        ):
+            ("Free cancellation", f"{config.CANCEL_CUTOFF_HOURS}h before"),
+        ]
+        if services:
+            cheapest = min(service["price"] for service in services)
+            facts_list.insert(0, ("Starting price", utils.format_peso(cheapest)))
+        for label, value in facts_list:
             row = tk.Frame(facts, bg=theme.BG_SURFACE)
             row.pack(fill="x", pady=theme.SPACE_SM)
             components.SubheadingLabel(row, text=value, width=theme.LABEL_WIDTH, anchor="w", surface=True).pack(side="left")
             components.CaptionLabel(row, text=label, wraplength=theme.WRAP_NARROW,
                      justify="left", surface=True).pack(side="left", fill="x", expand=True)
+
+        if self.session.role == "customer":
+            next_booking = booking_service.next_booking_for_user(self.session.user["id"])
+            if next_booking:
+                components.NextBookingCard(
+                    body, next_booking,
+                    on_view=lambda: self.app.go("MyBookings"),
+                    on_book=lambda: self.app.go("Book"),
+                ).pack(fill="x", pady=(theme.SPACE_LG, 0))
 
         promos = catalog_service.list_promotions(active_only=True)
         if promos:

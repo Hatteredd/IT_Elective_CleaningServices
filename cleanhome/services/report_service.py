@@ -7,10 +7,16 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from cleanhome import db, utils
+from cleanhome import config, db, utils
 from cleanhome.services import require_admin
 
 REVENUE_EXPRESSION = "(b.price_at_booking - b.discount_at_booking)"
+
+
+def _month_start(today: date, offset: int) -> date:
+    """Return the first day of the month ``offset`` months before ``today``."""
+    index = today.month - offset - 1
+    return date(today.year + index // 12, index % 12 + 1, 1)
 
 
 def dashboard_stats(actor: dict[str, Any] | None) -> dict[str, Any]:
@@ -31,6 +37,47 @@ def dashboard_stats(actor: dict[str, Any] | None) -> dict[str, Any]:
     customers = db.query_one(
         "SELECT COUNT(*) AS n FROM users WHERE role = 'customer' AND is_active = 1")["n"]
     services = db.query_one("SELECT COUNT(*) AS n FROM services WHERE is_active = 1")["n"]
+    bookings_this_month = db.query_one(
+        "SELECT COUNT(*) AS n FROM bookings "
+        "WHERE strftime('%Y-%m', scheduled_at) = strftime('%Y-%m', 'now')")["n"]
+    status_rows = db.query(
+        "SELECT status, COUNT(*) AS n FROM bookings GROUP BY status")
+    status_counts = {row["status"]: row["n"] for row in status_rows}
+
+    month_anchor = date.today()
+    starts = [_month_start(month_anchor, offset)
+              for offset in range(config.DASHBOARD_TREND_MONTHS - 1, -1, -1)]
+    monthly_revenue = []
+    for index, start in enumerate(starts):
+        end = (_month_start(month_anchor, -1) if index == len(starts) - 1
+               else starts[index + 1])
+        total = db.query_one(
+            f"SELECT COALESCE(SUM({REVENUE_EXPRESSION}), 0) AS total FROM bookings b "
+            "WHERE b.status = 'completed' "
+            "AND date(b.scheduled_at) >= date(?) AND date(b.scheduled_at) < date(?)",
+            (start.isoformat(), end.isoformat()),
+        )["total"]
+        monthly_revenue.append({
+            "label": start.strftime("%b"),
+            "value": utils.to_decimal(total),
+        })
+
+    top_rows = db.query(
+        f"SELECT s.name AS service_name, COUNT(b.id) AS bookings, "
+        f"COALESCE(SUM(CASE WHEN b.status = 'completed' THEN {REVENUE_EXPRESSION} END), 0) "
+        f"AS revenue FROM bookings b JOIN services s ON s.id = b.service_id "
+        "GROUP BY s.id ORDER BY revenue DESC, bookings DESC LIMIT ?",
+        (config.DASHBOARD_TOP_SERVICES,),
+    )
+    top_services = [
+        {
+            "service_name": row["service_name"],
+            "bookings": row["bookings"],
+            "revenue": utils.to_decimal(row["revenue"]),
+        }
+        for row in top_rows
+    ]
+
     return {
         "pending_bookings": pending,
         "today_bookings": today,
@@ -38,6 +85,10 @@ def dashboard_stats(actor: dict[str, Any] | None) -> dict[str, Any]:
         "revenue_this_month": utils.to_decimal(revenue),
         "active_customers": customers,
         "active_services": services,
+        "bookings_this_month": bookings_this_month,
+        "status_counts": status_counts,
+        "monthly_revenue": monthly_revenue,
+        "top_services": top_services,
     }
 
 

@@ -64,7 +64,7 @@ CHECK_SIZE = 18          # the square box of a check box
 # ── Layout ────────────────────────────────────────────────────────────────────
 # How many cards sit side by side in a grid.
 CARD_COLUMNS = 3
-DASHBOARD_COLUMNS = 6    # the stat cards on the admin dashboard
+DASHBOARD_COLUMNS = 4    # the stat cards on the admin dashboard
 REPORT_COLUMNS = 4       # the stat cards on the report screen
 
 # Column widths of the label/value pairs (in characters).
@@ -140,6 +140,17 @@ CHECK_TICK = ((4, 9), (7, 12), (14, 5))  # the three points of the tick
 AVATAR_SIZE = 56         # the square avatar on the profile card
 AVATAR_INSET = 2         # the gap between the avatar and its ring
 BORDER_WIDTH = 1         # the 1px border of a card or a table cell
+
+CHART_HEIGHT = 220
+CHART_PAD_LEFT = 6
+CHART_PAD_RIGHT = 6
+CHART_PAD_TOP = 18
+CHART_PAD_BOTTOM = 28
+CHART_GRID_LINES = 4
+CHART_BAR_RATIO = 0.55
+CHART_BAR_MIN_HEIGHT = 2
+CHART_LABEL_GAP = 6
+CHART_VALUE_GAP = 4
 
 # ── Table column widths (in pixels) ───────────────────────────────────────────
 BOOKINGS_TABLE_WIDTHS = (40, 110, 150, 110, 130, 140, 170, 80, 70)

@@ -89,6 +89,22 @@ class BookingCreationTests(ServiceTestCase):
             booking_service.create_booking(self.customer, self.service["id"],
                                            slot_time(future_day()), "12 Quezon Ave")
 
+    def test_next_booking_returns_the_soonest_open_booking(self) -> None:
+        later = booking_service.create_booking(
+            self.customer, self.service["id"], slot_time(future_day(9), 11),
+            "12 Quezon Ave")
+        sooner = booking_service.create_booking(
+            self.customer, self.service["id"], slot_time(future_day(8), 10),
+            "12 Quezon Ave")
+        self.assertEqual(booking_service.next_booking_for_user(self.customer["id"])["id"],
+                         sooner["id"])
+        booking_service.cancel_booking(self.customer, sooner["id"], "Plans changed")
+        self.assertEqual(booking_service.next_booking_for_user(self.customer["id"])["id"],
+                         later["id"])
+
+    def test_a_customer_without_bookings_has_no_next_booking(self) -> None:
+        self.assertIsNone(booking_service.next_booking_for_user(self.customer["id"]))
+
 
 class CapacityTests(ServiceTestCase):
     """No more than three cleanings may overlap."""

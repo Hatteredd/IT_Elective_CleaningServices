@@ -61,9 +61,8 @@ class Book(templates.PageTemplate):
         self.time_box.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
         self.slots: list[datetime] = []
 
-        components.CaptionLabel(inner, text="Service address", surface=True).pack(anchor="w")
         self.address = components.FormField(inner, "Service address", width=theme.FIELD_WIDTH_WIDE)
-        self.address.pack(fill="x", pady=(theme.SPACE_XS, 0))
+        self.address.pack(fill="x")
         if self.session.user and self.session.user.get("address"):
             self.address.set(self.session.user["address"])
         save_var = tk.BooleanVar(value=False)
@@ -71,9 +70,8 @@ class Book(templates.PageTemplate):
                                                 text="Save this address to my profile")
         self.save_address.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
 
-        components.CaptionLabel(inner, text="Notes (optional)", surface=True).pack(anchor="w")
-        self.notes = components.FormField(inner, "Notes", width=theme.FIELD_WIDTH_WIDE)
-        self.notes.pack(fill="x", pady=(theme.SPACE_XS, theme.SPACE_MD))
+        self.notes = components.FormField(inner, "Notes (optional)", width=theme.FIELD_WIDTH_WIDE)
+        self.notes.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.notes.bind_return(self._submit)
         self.address.bind_return(self._submit)
         self.address.input.bind("<FocusOut>", lambda event: self._update_quote(), add="+")

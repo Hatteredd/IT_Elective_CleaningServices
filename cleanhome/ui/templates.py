@@ -125,6 +125,7 @@ def card_body(card_frame) -> tk.Frame:
 def section(parent, title: str, subtitle: str = "") -> tk.Frame:
     """Return a titled section with a card body, ready for content."""
     frame = tk.Frame(parent, bg=theme.BG_PAGE)
+    frame.pack(fill="x", pady=(theme.SPACE_2XL, 0))
     components.SubheadingLabel(frame, text=title).pack(anchor="w")
     if subtitle:
         components.CaptionLabel(frame, text=subtitle).pack(anchor="w",

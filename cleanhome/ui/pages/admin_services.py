@@ -35,15 +35,6 @@ class AdminServices(templates.AdminTemplate):
         components.SecondaryButton(actions, "Archive/Restore", command=self._toggle
                                    ).pack(side="left")
 
-        settings = tk.Frame(body, bg=theme.BG_PAGE)
-        settings.pack(anchor="w", pady=(theme.SPACE_MD, 0))
-        self.active_toggle = components.Toggle(settings, command=self._toggle)
-        self.active_toggle.pack(side="left")
-        components.CaptionLabel(settings, text="Active in catalogue", surface=False).pack(
-            side="left", padx=(theme.SPACE_SM, 0))
-        self.table.tree.bind("<<TreeviewSelect>>", lambda event: self._sync_toggle())
-        self._sync_toggle()
-
     def _selected_service(self):
         selection = self.table.tree.selection()
         if not selection:
@@ -51,17 +42,10 @@ class AdminServices(templates.AdminTemplate):
         values = self.table.tree.item(selection[0], "values")
         return catalog_service.get_service(int(values[0]))
 
-    def _sync_toggle(self) -> None:
-        service = self._selected_service()
-        self.active_toggle.variable.set(bool(service and service["is_active"]))
-
     def _toggle(self) -> None:
         service = self._selected_service()
         if service is None:
-            self.active_toggle.variable.set(False)
             self.app.flash("Select a service first.", "info")
-            return
-        if service["is_active"] == bool(self.active_toggle.variable.get()):
             return
         if service["is_active"]:
             self._archive(service)
@@ -74,7 +58,6 @@ class AdminServices(templates.AdminTemplate):
                 catalog_service.archive_service(self.session.user, service["id"])
             except ServiceError as error:
                 self.app.flash(str(error), "error")
-                self._sync_toggle()
                 return
             self.app.flash("Service archived.", "info")
             self._refresh()
@@ -89,7 +72,6 @@ class AdminServices(templates.AdminTemplate):
             catalog_service.restore_service(self.session.user, service["id"])
         except ServiceError as error:
             self.app.flash(str(error), "error")
-            self._sync_toggle()
             return
         self.app.flash("Service restored.", "success")
         self._refresh()

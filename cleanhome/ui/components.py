@@ -394,6 +394,7 @@ class InputRing(tk.Frame):
         self._widget = widget
         self._error = False
         widget.pack(in_=self, fill="both", expand=True)
+        widget.lift()
 
     def set_error(self, has_error: bool) -> None:
         self._error = bool(has_error)
@@ -597,6 +598,90 @@ class StatCard(tk.Frame):
                      font=theme.font("CAPTION")).pack(anchor="w", pady=(theme.SPACE_XS, 0))
 
 
+class BarChart(tk.Frame):
+    """A small labelled column chart drawn on a canvas."""
+
+    def __init__(self, parent, labels, values, *, formatter=utils.format_peso,
+                 height: int = theme.CHART_HEIGHT, **kwargs):
+        super().__init__(parent, bg=theme.BG_SURFACE, **kwargs)
+        self._labels = list(labels)
+        self._values = [float(value) for value in values]
+        self._formatter = formatter
+        self.canvas = tk.Canvas(self, bg=theme.BG_SURFACE, height=height,
+                                highlightthickness=0, bd=0)
+        self.canvas.pack(fill="both", expand=True)
+        self.canvas.bind("<Configure>", self._draw)
+        self._draw()
+
+    def _draw(self, event=None) -> None:
+        canvas = self.canvas
+        canvas.delete("all")
+        width = event.width if event is not None else canvas.winfo_width()
+        height = event.height if event is not None else canvas.winfo_height()
+        left = theme.CHART_PAD_LEFT
+        right = width - theme.CHART_PAD_RIGHT
+        top = theme.CHART_PAD_TOP
+        bottom = height - theme.CHART_PAD_BOTTOM
+        if right - left < theme.CHART_PAD_LEFT or bottom - top < theme.CHART_PAD_TOP:
+            return
+        if not self._values:
+            canvas.create_text(width / 2, height / 2, text="No data yet.",
+                               fill=theme.TEXT_MUTED, font=theme.font("CAPTION"))
+            return
+
+        for line in range(theme.CHART_GRID_LINES + 1):
+            y = top + (bottom - top) * line / theme.CHART_GRID_LINES
+            canvas.create_line(left, y, right, y, fill=theme.BORDER)
+
+        peak = max(self._values) or 1.0
+        span = (right - left) / len(self._values)
+        bar_width = max(1.0, span * theme.CHART_BAR_RATIO)
+        for index, (label, value) in enumerate(zip(self._labels, self._values)):
+            center = left + span * (index + 0.5)
+            bar_top = bottom - (value / peak) * (bottom - top)
+            if value > 0:
+                bar_top = min(bar_top, bottom - theme.CHART_BAR_MIN_HEIGHT)
+                canvas.create_rectangle(center - bar_width / 2, bar_top,
+                                        center + bar_width / 2, bottom,
+                                        fill=theme.PRIMARY, outline="")
+            canvas.create_text(center, bottom + theme.CHART_LABEL_GAP, text=label,
+                               anchor="n", fill=theme.TEXT_MUTED,
+                               font=theme.font("CAPTION"))
+            if value > 0:
+                canvas.create_text(center, bar_top - theme.CHART_VALUE_GAP,
+                                   text=self._formatter(value), anchor="s",
+                                   fill=theme.TEXT_MUTED, font=theme.font("CAPTION"))
+
+
+class RankingList(tk.Frame):
+    """A numbered list of labels with a value on the right."""
+
+    def __init__(self, parent, items, *, value_formatter=utils.format_peso,
+                 empty_message: str = "No data yet.", **kwargs):
+        super().__init__(parent, bg=theme.BG_SURFACE, **kwargs)
+        if not items:
+            CaptionLabel(self, text=empty_message, surface=True).pack(
+                anchor="w", pady=(theme.SPACE_XS, 0))
+            return
+        for index, item in enumerate(items):
+            row = tk.Frame(self, bg=theme.BG_SURFACE)
+            row.pack(fill="x", pady=theme.SPACE_SM)
+            rank = tk.Label(row, text=str(index + 1), bg=theme.PRIMARY_SOFT,
+                            fg=theme.PRIMARY, font=theme.font("CAPTION"),
+                            padx=theme.SPACE_XS, pady=theme.SPACE_XS)
+            rank.pack(side="left", anchor="n")
+            text = tk.Frame(row, bg=theme.BG_SURFACE)
+            text.pack(side="left", fill="x", expand=True, padx=(theme.SPACE_SM, 0))
+            BodyLabel(text, text=item["label"], wraplength=theme.WRAP_NARROW,
+                      justify="left", surface=True).pack(anchor="w")
+            if item.get("caption"):
+                CaptionLabel(text, text=item["caption"], surface=True).pack(anchor="w")
+            PriceLabel(row, text=value_formatter(item["value"]),
+                       surface=True).pack(side="right", anchor="n")
+            if index < len(items) - 1:
+                Divider(self).pack(fill="x")
+
+
 class PriceTag(tk.Frame):
     """A price, an optional struck-through original, and the duration."""
 
@@ -679,7 +764,7 @@ class CheckBox(tk.Canvas):
         self._frame = tk.Frame(parent, bg=background)
         super().__init__(self._frame, width=theme.CHECK_SIZE, height=theme.CHECK_SIZE,
                          highlightthickness=0, bd=0, bg=background)
-        self.pack(side="left")
+        super().pack(side="left")
         self.variable = variable or tk.BooleanVar(value=False)
         self.command = command
         self._draw()
@@ -893,6 +978,43 @@ class BookingRow(tk.Frame):
                     side="left", padx=(0, theme.SPACE_SM))
             if on_cancel:
                 DangerButton(actions, "Cancel", command=on_cancel).pack(side="left")
+
+
+class NextBookingCard(tk.Frame):
+    """The customer's next scheduled cleaning, with a shortcut to their list."""
+
+    def __init__(self, parent, booking: dict, *, on_view: Callable,
+                 on_book: Callable | None = None, **kwargs):
+        super().__init__(parent, bg=theme.BG_SURFACE, highlightbackground=theme.BORDER,
+                         highlightthickness=theme.BORDER_WIDTH, bd=0, **kwargs)
+        accent = tk.Frame(self, bg=theme.PRIMARY, height=theme.ACCENT_HEIGHT)
+        accent.pack(fill="x")
+        inner = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.CARD_PAD,
+                         pady=theme.CARD_PAD)
+        inner.pack(fill="both", expand=True)
+
+        top = tk.Frame(inner, bg=theme.BG_SURFACE)
+        top.pack(fill="x")
+        CaptionLabel(top, text="YOUR NEXT CLEANING", surface=True).pack(side="left")
+        Badge(top, booking_service_label(booking.get("status", "")),
+              booking.get("status", "")).pack(side="left", padx=theme.SPACE_SM)
+        PriceLabel(top, text=utils.format_peso(booking.get("total_at_booking", 0)),
+                   surface=True).pack(side="right")
+
+        SubheadingLabel(inner, text=booking.get("service_name", ""),
+                        surface=True).pack(anchor="w", pady=(theme.SPACE_SM, 0))
+        BodyLabel(inner, text=utils.format_datetime(booking.get("scheduled_at")),
+                  surface=True).pack(anchor="w", pady=(theme.SPACE_XS, 0))
+        if booking.get("address"):
+            CaptionLabel(inner, text=booking["address"], wraplength=theme.WRAP_CARD,
+                         justify="left", surface=True).pack(anchor="w")
+
+        actions = tk.Frame(inner, bg=theme.BG_SURFACE)
+        actions.pack(anchor="w", pady=(theme.SPACE_MD, 0))
+        PrimaryButton(actions, "View My Bookings", command=on_view).pack(side="left")
+        if on_book:
+            SecondaryButton(actions, "Book Another", command=on_book).pack(
+                side="left", padx=(theme.SPACE_SM, 0))
 
 
 class DataTable(ttk.Frame):

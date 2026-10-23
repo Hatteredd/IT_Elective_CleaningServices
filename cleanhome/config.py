@@ -93,6 +93,9 @@ MAX_SERVICE_NAME_LENGTH = 100
 FEATURED_SERVICE_COUNT = 3
 UPCOMING_BOOKINGS_LIMIT = 10
 
+DASHBOARD_TREND_MONTHS = 6
+DASHBOARD_TOP_SERVICES = 5
+
 # Minutes in an hour, used to turn the opening and closing hours into times.
 MINUTES_PER_HOUR = 60
 
