@@ -40,6 +40,11 @@ PRIMARY_DISABLED_TEXT = "#F0F3F6"
 DANGER_HOVER = "#C43B40"
 DANGER_DISABLED = "#EFC0C2"
 DANGER_DISABLED_TEXT = "#FDF3F3"
+NAVBAR_BORDER = "#E5E7EB"   # 1px line under the nav bar
+SELECTED_ROW = "#DBEAFE"    # highlighted row in a treeview
+SELECTED_ROW_FG = "#1E3A5F"  # text on a selected row
+LINK_COLOR = "#0A6CF0"       # clickable text (same as PRIMARY)
+REQUIRED_MARK = "#E5484D"    # the * next to required field labels
 
 # ── Spacing (16px grid: multiples of 4 and 8 only) ───────────────────────────
 SPACE_XS, SPACE_SM, SPACE_MD, SPACE_LG, SPACE_XL, SPACE_2XL = 4, 8, 12, 16, 24, 32
@@ -258,10 +263,16 @@ def configure_style(root: tk.Misc) -> None:
     style.configure("Treeview.Heading", background=BG_PAGE, foreground=TEXT_BODY,
                     font=font("CAPTION"), relief="flat", padding=(6, 6))
     style.map("Treeview.Heading", background=[("active", BG_PAGE)])
+    style.map("Treeview",
+              background=[("selected", SELECTED_ROW)],
+              foreground=[("selected", SELECTED_ROW_FG)])
 
     style.configure("TNotebook", background=BG_PAGE, borderwidth=0)
     style.configure("TNotebook.Tab", padding=(14, 8), font=font("BODY"))
-    style.map("TNotebook.Tab", background=[("selected", BG_SURFACE)])
+    style.map("TNotebook.Tab",
+              background=[("selected", BG_SURFACE)],
+              foreground=[("selected", TEXT)],
+              font=[("selected", font("BODY"))])
 
     for name, bg, fg in (
         ("Badge.Pending", WARNING_SOFT, WARNING),

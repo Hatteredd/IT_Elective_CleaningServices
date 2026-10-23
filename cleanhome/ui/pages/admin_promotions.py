@@ -106,7 +106,7 @@ class PromoForm(components.FormDialog):
         self.actor = actor
         self.promo = promo
 
-        self.title_field = components.FormField(self.body, "Title")
+        self.title_field = components.FormField(self.body, "Title", required=True)
         self.title_field.pack(fill="x", pady=(0, theme.SPACE_MD))
         components.CaptionLabel(self.body, text="Service (leave blank for all)",
                                 surface=True).pack(anchor="w")
@@ -129,8 +129,9 @@ class PromoForm(components.FormDialog):
         ttk.Radiobutton(type_row, text="Fixed (₱)", variable=self.type_var,
                         value="fixed").pack(side="left", padx=(theme.SPACE_MD, 0))
 
-        self.value = components.FormField(self.body, "Discount value")
+        self.value = components.FormField(self.body, "Discount value", required=True)
         self.value.pack(fill="x", pady=(0, theme.SPACE_MD))
+        self.title_field.focus_field()
 
         components.CaptionLabel(self.body, text="Starts", surface=True).pack(anchor="w")
         start_row = tk.Frame(self.body, bg=theme.BG_SURFACE)

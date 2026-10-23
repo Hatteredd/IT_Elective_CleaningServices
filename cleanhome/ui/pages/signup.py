@@ -25,16 +25,18 @@ class Signup(templates.FormMixin, templates.AuthTemplate):
         components.HeadingLabel(inner, text="Create your account", surface=True).pack(anchor="w")
         components.BodyLabel(inner, text="It takes less than a minute to sign up.", surface=True).pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_LG))
 
-        self.full_name = components.FormField(inner, "Full name", placeholder="Juan Dela Cruz")
+        self.full_name = components.FormField(inner, "Full name", placeholder="Juan Dela Cruz",
+                                              required=True)
         self.full_name.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.email = components.FormField(inner, "Email", placeholder="you@example.com")
+        self.email = components.FormField(inner, "Email", placeholder="you@example.com",
+                                          required=True)
         self.email.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.phone = components.FormField(inner, "Mobile number (optional)",
                                           placeholder="09171234567")
         self.phone.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.password = components.FormField(inner, "Password", secret=True)
+        self.password = components.FormField(inner, "Password", secret=True, required=True)
         self.password.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.confirm = components.FormField(inner, "Confirm password", secret=True)
+        self.confirm = components.FormField(inner, "Confirm password", secret=True, required=True)
         self.confirm.pack(fill="x", pady=(0, theme.SPACE_MD))
         self._fields = {
             "full_name": self.full_name,
@@ -46,6 +48,10 @@ class Signup(templates.FormMixin, templates.AuthTemplate):
         for field in self._fields.values():
             field.input.bind("<Return>", lambda event: self._create_account())
         self.bind("<Return>", lambda event: self._create_account())
+        components.bind_tab_order(
+            self.full_name.input, self.email.input, self.phone.input,
+            self.password.input, self.confirm.input)
+        self.full_name.focus_field()
 
         self.error_label = components.BodyLabel(inner, text="", wraplength=theme.WRAP_FORM,
                                     justify="left", surface=True)
@@ -57,7 +63,9 @@ class Signup(templates.FormMixin, templates.AuthTemplate):
         footer = tk.Frame(inner, bg=theme.BG_SURFACE)
         footer.pack(anchor="w", pady=(theme.SPACE_LG, 0))
         components.CaptionLabel(footer, text="Already have an account?", surface=True).pack(side="left")
-        link = components.CaptionLabel(footer, text="Sign in", cursor="hand2", surface=True)
+        link = components.CaptionLabel(footer, text="Sign in", cursor="hand2",
+                                        fg=theme.LINK_COLOR,
+                                        surface=True)
         link.pack(side="left", padx=(theme.SPACE_XS, 0))
         link.bind("<Button-1>", lambda event: self.app.go("Login"))
 

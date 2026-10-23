@@ -567,7 +567,7 @@ def check_admin_flow(app: CleanHomeApp, admin) -> None:
           booking_service.get_booking(booking_id)["status"] == "completed",
           booking_service.get_booking(booking_id)["status"])
 
-    page.status.set("completed")
+    page.status.set("Completed")
     page._refresh()
     app.update()
     check("the filter keeps the completed booking",

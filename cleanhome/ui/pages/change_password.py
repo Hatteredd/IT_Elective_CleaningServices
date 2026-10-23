@@ -25,11 +25,13 @@ class ChangePassword(templates.FormMixin, templates.PageTemplate):
         card.pack(fill="x", pady=(theme.SPACE_LG, 0))
         inner = templates.card_body(card)
 
-        self.current = components.FormField(inner, "Current password", secret=True)
+        self.current = components.FormField(inner, "Current password", secret=True,
+                                            required=True)
         self.current.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.new = components.FormField(inner, "New password", secret=True)
+        self.new = components.FormField(inner, "New password", secret=True, required=True)
         self.new.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.confirm = components.FormField(inner, "Confirm new password", secret=True)
+        self.confirm = components.FormField(inner, "Confirm new password", secret=True,
+                                           required=True)
         self.confirm.pack(fill="x", pady=(0, theme.SPACE_MD))
         self._fields = {
             "current_password": self.current,
@@ -39,6 +41,9 @@ class ChangePassword(templates.FormMixin, templates.PageTemplate):
         for field in self._fields.values():
             field.input.bind("<Return>", lambda event: self._update())
         self.bind("<Return>", lambda event: self._update())
+        components.bind_tab_order(
+            self.current.input, self.new.input, self.confirm.input)
+        self.current.focus_field()
 
         self.forced = bool(self.session.user and
                            self.session.user.get("must_change_password"))

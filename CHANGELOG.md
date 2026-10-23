@@ -3,6 +3,36 @@
 All notable changes to CleanHome PH are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased] — 23 October 2026: UI/UX polish pass
+
+### Added
+
+* **Form required indicators:** `FormField` now supports `required=True` to
+  render a standard red asterisk (`*`) on mandatory form fields across
+  Login, Sign Up, Profile, Change Password, Create Admin, Booking, Service Form,
+  Promo Form, and Add Admin Dialog.
+* **Dialog auto-centering:** All modal dialogs (`FormDialog`, `CancelDialog`,
+  `RescheduleDialog`, and `ConfirmDialog`) automatically center over the parent
+  application window upon opening.
+* **Keyboard navigation:** Added logical tab orders (`bind_tab_order`) and
+  initial field focus to all forms and modal dialogs.
+* **Link styling:** Added clear primary link colors to clickable auth links
+  ("Create an account" on Login, "Sign in" on Sign Up).
+* **Navigation bar border:** Added subtle 1px border at the bottom of `NavBar`
+  to cleanly delineate the navigation header from the page body.
+* **Notebook tab styling:** Added explicit foreground and font styles for
+  selected tabs on Windows ttk themes.
+
+### Changed
+
+* **Admin bookings filter:** Status dropdown displays clean, human-readable
+  labels ("All", "Pending", "Confirmed", "In Progress", "Completed", "Cancelled")
+  mapped back to the internal status queries.
+* **Profile page:** Email is displayed cleanly with its own label row as a
+  read-only account attribute rather than an unlabelled text line.
+* **Service details:** Added standard spacing before action buttons for clean
+  visual separation.
+
 ## [Unreleased] — 23 October 2026: final acceptance pass
 
 ### Added

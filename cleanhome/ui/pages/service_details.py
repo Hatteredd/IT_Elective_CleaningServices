@@ -79,7 +79,7 @@ class ServiceDetails(templates.PageTemplate):
                 surface=True).pack(side="left", padx=(theme.SPACE_SM, 0))
 
         actions = tk.Frame(inner, bg=theme.BG_SURFACE)
-        actions.pack(anchor="w")
+        actions.pack(anchor="w", pady=(theme.SPACE_LG, 0))
         if self.session.role != "admin":
             components.PrimaryButton(actions, "Book Now",
                                      command=lambda: self.app.go("Book",

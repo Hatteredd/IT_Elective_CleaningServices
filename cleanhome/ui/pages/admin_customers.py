@@ -98,18 +98,22 @@ class AddAdminDialog(components.FormDialog):
         super().__init__(parent, "Add Admin", on_saved, save_label="Create Admin")
         self.actor = actor
 
-        self.name = components.FormField(self.body, "Full name")
+        self.name = components.FormField(self.body, "Full name", required=True)
         self.name.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.email = components.FormField(self.body, "Email",
-                                          placeholder="name@example.com")
+                                          placeholder="name@example.com",
+                                          required=True)
         self.email.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.password = components.FormField(self.body, "Password", secret=True)
+        self.password = components.FormField(self.body, "Password", secret=True,
+                                             required=True)
         self.password.pack(fill="x", pady=(0, theme.SPACE_MD))
         self._fields = {
             "full_name": self.name,
             "email": self.email,
             "password": self.password,
         }
+        components.bind_tab_order(self.name.input, self.email.input, self.password.input)
+        self.name.focus_field()
 
     def _submit(self) -> None:
         self.clear_form_errors()

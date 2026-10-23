@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import tkinter as tk
+from tkinter import ttk
 
 from cleanhome import theme
 from cleanhome.services import ValidationError, auth_service
@@ -27,10 +29,15 @@ class Profile(templates.FormMixin, templates.PageTemplate):
         card.pack(fill="x", pady=(theme.SPACE_LG, 0))
         inner = templates.card_body(card)
 
-        self.full_name = components.FormField(inner, "Full name")
+        self.full_name = components.FormField(inner, "Full name", required=True)
         self.full_name.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.email = components.BodyLabel(inner, text=self.session.user.get("email", ""), surface=True)
-        self.email.pack(anchor="w", pady=(0, theme.SPACE_MD))
+        # Email is read-only — show it as a labelled value, not an editable field
+        email_row = tk.Frame(inner, bg=theme.BG_SURFACE)
+        email_row.pack(fill="x", pady=(0, theme.SPACE_MD))
+        ttk.Label(email_row, text="Email", style="Caption.TLabel").pack(anchor="w")
+        components.BodyLabel(email_row,
+                             text=self.session.user.get("email", ""),
+                             surface=True).pack(anchor="w", pady=(theme.SPACE_XS, 0))
         self.phone = components.FormField(inner, "Mobile number")
         self.phone.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.address = components.FormField(inner, "Default address")
@@ -47,6 +54,9 @@ class Profile(templates.FormMixin, templates.PageTemplate):
         for field in self._fields.values():
             field.input.bind("<Return>", lambda event: self._save())
         self.bind("<Return>", lambda event: self._save())
+        components.bind_tab_order(
+            self.full_name.input, self.phone.input, self.address.input)
+        self.full_name.focus_field()
 
         components.PrimaryButton(inner, "Save Changes", command=self._save).pack(
             anchor="w", pady=(theme.SPACE_MD, 0))

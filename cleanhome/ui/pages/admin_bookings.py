@@ -24,9 +24,12 @@ class AdminBookings(templates.AdminTemplate):
         self.search = components.SearchBar(toolbar, placeholder="Search customer or address",
                                            on_change=self._refresh)
         self.search.pack(side="left")
+        _STATUS_OPTIONS = [("All", None), ("Pending", "pending"), ("Confirmed", "confirmed"),
+                           ("In Progress", "in_progress"), ("Completed", "completed"),
+                           ("Cancelled", "cancelled")]
+        self._status_map = {label: raw for label, raw in _STATUS_OPTIONS}
         self.status = components.Dropdown(
-            toolbar, ["All", "pending", "confirmed", "in_progress", "completed",
-                      "cancelled"],
+            toolbar, [label for label, _ in _STATUS_OPTIONS],
             width=theme.DROPDOWN_STATUS, on_change=lambda value: self._refresh())
         self.status.pack(side="left", padx=theme.SPACE_SM)
 
@@ -73,9 +76,8 @@ class AdminBookings(templates.AdminTemplate):
         self._refresh()
 
     def _refresh(self) -> None:
-        status = self.status.get()
-        if status == "All":
-            status = None
+        status_label = self.status.get()
+        status = self._status_map.get(status_label)
         date_from = self.date_from.get_date()
         date_to = self.date_to.get_date()
         if date_from and date_to and date_from > date_to:

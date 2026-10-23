@@ -419,10 +419,15 @@ class FormField(ttk.Frame):
     """A label, a 2px-ring input, and an inline error message."""
 
     def __init__(self, parent, label: str, *, secret: bool = False,
-                 placeholder: str = "", width: int = theme.FIELD_WIDTH, **kwargs):
+                 placeholder: str = "", width: int = theme.FIELD_WIDTH,
+                 required: bool = False, **kwargs):
         super().__init__(parent, style="TFrame", **kwargs)
-        ttk.Label(self, text=label, style="Caption.TLabel").pack(anchor="w",
-                                                                 pady=(0, theme.SPACE_XS))
+        label_row = tk.Frame(self, bg=theme.BG_PAGE)
+        label_row.pack(anchor="w", pady=(0, theme.SPACE_XS))
+        ttk.Label(label_row, text=label, style="Caption.TLabel").pack(side="left")
+        if required:
+            tk.Label(label_row, text=" *", bg=theme.BG_PAGE, fg=theme.REQUIRED_MARK,
+                     font=theme.font("CAPTION")).pack(side="left")
         if secret:
             row = ttk.Frame(self, style="TFrame")
             row.pack(fill="x")
@@ -808,7 +813,7 @@ class NavBar(tk.Frame):
 
     def __init__(self, parent, app, active: str = ""):
         super().__init__(parent, bg=theme.BG_SURFACE, height=theme.NAVBAR_HEIGHT,
-                         highlightbackground=theme.BORDER, highlightthickness=0)
+                         highlightbackground=theme.NAVBAR_BORDER, highlightthickness=1)
         self.app = app
         self.pack_propagate(False)
         inner = tk.Frame(self, bg=theme.BG_SURFACE)
@@ -1180,6 +1185,7 @@ class FormDialog(FormMixin, tk.Toplevel):
         self.title(title)
         self.resizable(False, False)
         self.on_saved = on_saved
+        self._center_on_parent(parent)
 
         container = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
                              pady=theme.SPACE_LG)
@@ -1214,6 +1220,20 @@ class FormDialog(FormMixin, tk.Toplevel):
         self.close()
         if self.on_saved is not None:
             self.on_saved()
+
+    def _center_on_parent(self, parent: tk.Misc) -> None:
+        """Position this dialog over the centre of its parent window."""
+        self.update_idletasks()
+        try:
+            root = parent.winfo_toplevel()
+            px = root.winfo_rootx() + root.winfo_width() // 2
+            py = root.winfo_rooty() + root.winfo_height() // 2
+            w, h = self.winfo_width(), self.winfo_height()
+            self.geometry(f"+{px - w // 2}+{py - h // 2}")
+        except tk.TclError:
+            pass
+
+
 class CancelDialog(tk.Toplevel):
     """Ask for a cancellation reason before a booking is cancelled."""
 
@@ -1228,6 +1248,7 @@ class CancelDialog(tk.Toplevel):
         self.transient(parent)
         self.resizable(False, False)
         self.grab_set()
+        self._center_on_parent(parent)
 
         frame = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
                          pady=theme.SPACE_LG)
@@ -1270,6 +1291,18 @@ class CancelDialog(tk.Toplevel):
         self.grab_release()
         self.destroy()
 
+    def _center_on_parent(self, parent: tk.Misc) -> None:
+        """Position this dialog over the centre of its parent window."""
+        self.update_idletasks()
+        try:
+            root = parent.winfo_toplevel()
+            px = root.winfo_rootx() + root.winfo_width() // 2
+            py = root.winfo_rooty() + root.winfo_height() // 2
+            w, h = self.winfo_width(), self.winfo_height()
+            self.geometry(f"+{px - w // 2}+{py - h // 2}")
+        except tk.TclError:
+            pass
+
 
 class RescheduleDialog(tk.Toplevel):
     """Pick a new date and time for a booking."""
@@ -1284,6 +1317,7 @@ class RescheduleDialog(tk.Toplevel):
         self.transient(parent)
         self.resizable(False, False)
         self.grab_set()
+        self._center_on_parent(parent)
 
         frame = tk.Frame(self, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
                          pady=theme.SPACE_LG)
@@ -1353,6 +1387,18 @@ class RescheduleDialog(tk.Toplevel):
         self.grab_release()
         self.destroy()
 
+    def _center_on_parent(self, parent: tk.Misc) -> None:
+        """Position this dialog over the centre of its parent window."""
+        self.update_idletasks()
+        try:
+            root = parent.winfo_toplevel()
+            px = root.winfo_rootx() + root.winfo_width() // 2
+            py = root.winfo_rooty() + root.winfo_height() // 2
+            w, h = self.winfo_width(), self.winfo_height()
+            self.geometry(f"+{px - w // 2}+{py - h // 2}")
+        except tk.TclError:
+            pass
+
 
 class ProfileCard(tk.Frame):
     """Avatar initials, name, and role — used on the Profile page."""
@@ -1398,6 +1444,7 @@ class ConfirmDialog:
         self.window.transient(parent)
         self.window.resizable(False, False)
         self.window.grab_set()
+        self._center_on_parent(parent)
 
         frame = tk.Frame(self.window, bg=theme.BG_SURFACE, padx=theme.SPACE_XL,
                          pady=theme.SPACE_LG)
@@ -1423,6 +1470,18 @@ class ConfirmDialog:
     def _close(self) -> None:
         self.window.grab_release()
         self.window.destroy()
+
+    def _center_on_parent(self, parent: tk.Misc) -> None:
+        """Position this dialog over the centre of its parent window."""
+        self.window.update_idletasks()
+        try:
+            root = parent.winfo_toplevel()
+            px = root.winfo_rootx() + root.winfo_width() // 2
+            py = root.winfo_rooty() + root.winfo_height() // 2
+            w, h = self.window.winfo_width(), self.window.winfo_height()
+            self.window.geometry(f"+{px - w // 2}+{py - h // 2}")
+        except tk.TclError:
+            pass
 
 
 def bind_tab_order(*widgets) -> None:

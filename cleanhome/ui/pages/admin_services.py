@@ -114,15 +114,15 @@ class ServiceForm(components.FormDialog):
         self.actor = actor
         self.service = service
 
-        self.name = components.FormField(self.body, "Name")
+        self.name = components.FormField(self.body, "Name", required=True)
         self.name.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.description = components.FormField(self.body, "Description")
         self.description.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.inclusions = components.FormField(self.body, "Inclusions")
         self.inclusions.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.price = components.FormField(self.body, "Price (₱)")
+        self.price = components.FormField(self.body, "Price (₱)", required=True)
         self.price.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.duration = components.FormField(self.body, "Duration (minutes)")
+        self.duration = components.FormField(self.body, "Duration (minutes)", required=True)
         self.duration.pack(fill="x", pady=(0, theme.SPACE_MD))
         self._fields = {
             "name": self.name,
@@ -131,6 +131,10 @@ class ServiceForm(components.FormDialog):
             "price": self.price,
             "duration_mins": self.duration,
         }
+        components.bind_tab_order(self.name.input, self.description.input,
+                                  self.inclusions.input, self.price.input,
+                                  self.duration.input)
+        self.name.focus_field()
 
         if service:
             self.name.set(service["name"])

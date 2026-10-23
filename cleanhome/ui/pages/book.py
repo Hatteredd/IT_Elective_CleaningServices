@@ -61,7 +61,8 @@ class Book(templates.PageTemplate):
         self.time_box.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
         self.slots: list[datetime] = []
 
-        self.address = components.FormField(inner, "Service address", width=theme.FIELD_WIDTH_WIDE)
+        self.address = components.FormField(inner, "Service address", width=theme.FIELD_WIDTH_WIDE,
+                                            required=True)
         self.address.pack(fill="x")
         if self.session.user and self.session.user.get("address"):
             self.address.set(self.session.user["address"])

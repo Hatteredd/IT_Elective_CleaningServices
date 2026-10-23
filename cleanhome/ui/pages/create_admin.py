@@ -30,15 +30,17 @@ class CreateAdmin(templates.FormMixin, templates.AuthTemplate):
             surface=True, wraplength=theme.WRAP_FORM, justify="left").pack(
             anchor="w", pady=(theme.SPACE_XS, theme.SPACE_LG))
 
-        self.full_name = components.FormField(inner, "Full name")
+        self.full_name = components.FormField(inner, "Full name", required=True)
         self.full_name.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.email = components.FormField(inner, "Email", placeholder="you@example.com")
+        self.email = components.FormField(inner, "Email", placeholder="you@example.com",
+                                          required=True)
         self.email.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.phone = components.FormField(inner, "Mobile number (optional)")
         self.phone.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.password = components.FormField(inner, "Password", secret=True)
+        self.password = components.FormField(inner, "Password", secret=True, required=True)
         self.password.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.confirm = components.FormField(inner, "Confirm password", secret=True)
+        self.confirm = components.FormField(inner, "Confirm password", secret=True,
+                                           required=True)
         self.confirm.pack(fill="x", pady=(0, theme.SPACE_MD))
 
         self._fields = {
