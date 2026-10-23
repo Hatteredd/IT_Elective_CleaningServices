@@ -51,12 +51,14 @@ class About(templates.PageTemplate):
             ("Easy changes", f"Reschedule or cancel free up to {config.CANCEL_CUTOFF_HOURS} "
                              "hours before the scheduled start."),
         )):
-            column = tk.Frame(row, bg=theme.BG_PAGE)
-            column.grid(row=0, column=index, sticky="nsew",
+            card = templates.card(row)
+            card.grid(row=0, column=index, sticky="nsew",
                         padx=(0 if index == 0 else theme.SPACE_MD, 0))
-            components.SubheadingLabel(column, text=title, surface=False).pack(anchor="w")
-            components.BodyLabel(column, text=text, wraplength=theme.WRAP_COLUMN,
-                     justify="left", surface=False).pack(anchor="w", pady=(theme.SPACE_XS, 0))
+            inner = templates.card_body(card)
+            inner.configure(bg=theme.BG_SURFACE)
+            components.SubheadingLabel(inner, text=title, surface=True).pack(anchor="w")
+            components.BodyLabel(inner, text=text, wraplength=theme.WRAP_COLUMN,
+                     justify="left", surface=True).pack(anchor="w", pady=(theme.SPACE_XS, 0))
 
         areas = templates.card(body)
         areas.pack(fill="x", pady=(theme.SPACE_LG, 0))

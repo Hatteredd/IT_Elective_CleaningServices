@@ -35,6 +35,7 @@ SCHEMA = (
         is_active       INTEGER NOT NULL DEFAULT 1,
         failed_attempts INTEGER NOT NULL DEFAULT 0,
         locked_until    TEXT,
+        profile_picture_path TEXT,
         created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
     )
     """,
@@ -113,6 +114,7 @@ COLUMN_MIGRATIONS: tuple[tuple[str, str, str], ...] = (
     ("users", "failed_attempts", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "locked_until", "TEXT"),
     ("users", "must_change_password", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "profile_picture_path", "TEXT"),
     ("bookings", "cancel_reason", "TEXT"),
     ("services", "inclusions", "TEXT DEFAULT ''"),
 )

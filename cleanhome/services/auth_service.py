@@ -244,7 +244,8 @@ def change_password(actor: dict[str, Any], current_password: str,
 
 
 def update_profile(actor: dict[str, Any], full_name: str, phone: str,
-                   address: str, email: str | None = None) -> dict[str, Any]:
+                   address: str, email: str | None = None,
+                   profile_picture_path: str | None = None) -> dict[str, Any]:
     """Update the signed-in user's own profile."""
     if not actor:
         raise AuthError("You must be signed in to edit your profile.")
@@ -266,6 +267,10 @@ def update_profile(actor: dict[str, Any], full_name: str, phone: str,
             raise ValidationError("An account with this email already exists.", "email")
         sql += ", email = ?"
         params.append(clean_email)
+    
+    if profile_picture_path is not None:
+        sql += ", profile_picture_path = ?"
+        params.append(profile_picture_path)
         
     sql += " WHERE id = ?"
     params.append(actor["id"])
