@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import csv
-from datetime import date
+import calendar
+from datetime import date, timedelta
+from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Optional, Any, Optional
 
 from cleanhome import config, db, utils
 from cleanhome.services import require_admin
@@ -92,8 +94,8 @@ def dashboard_stats(actor: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def revenue_report(actor: dict[str, Any] | None, start: date | None = None,
-                   end: date | None = None) -> dict[str, Any]:
+def revenue_report(actor: dict[str, Any] | None, start: Optional[date] = None,
+                   end: Optional[date] = None) -> dict[str, Any]:
     """Return booking totals and revenue for a date range."""
     require_admin(actor)
     clauses: list[str] = []
@@ -121,11 +123,18 @@ def revenue_report(actor: dict[str, Any] | None, start: date | None = None,
         "GROUP BY s.id ORDER BY revenue DESC",
         params,
     )
+    salaries = salaries_for_period(start, end)
+    expenses = expenses_for_period(start, end)
+    revenue = utils.to_decimal(totals["revenue"])
+
     return {
         "total_bookings": totals["total"] or 0,
         "completed": totals["completed"] or 0,
         "cancelled": totals["cancelled"] or 0,
-        "revenue": utils.to_decimal(totals["revenue"]),
+        "revenue": revenue,
+        "salaries": salaries,
+        "expenses": expenses,
+        "profit": revenue - salaries - expenses,
         "revenue_per_service": [
             {
                 "service_name": row["service_name"],
@@ -136,9 +145,64 @@ def revenue_report(actor: dict[str, Any] | None, start: date | None = None,
         ],
     }
 
+def salaries_for_period(start: Optional[date] = None, end: Optional[date] = None) -> Decimal:
+    """Return the prorated salary cost for a date range."""
+    if not start or not end:
+        # Default to a month if no range given, or return zero if ambiguous
+        return Decimal("0")
+
+    # Fetch active employees
+    rows = db.query("SELECT monthly_salary FROM employees WHERE is_active = 1")
+    total_monthly = sum(utils.to_decimal(row["monthly_salary"]) for row in rows)
+    if total_monthly == 0:
+        return Decimal("0")
+
+    total_prorated = Decimal("0")
+    current = start
+    # Iterate month by month to handle varying month lengths
+    while current <= end:
+        month_start = current.replace(day=1)
+        _, days_in_month = calendar.monthrange(month_start.year, month_start.month)
+        month_end = current.replace(day=days_in_month)
+
+        # Intersection of [start, end] and [month_start, month_end]
+        overlap_start = max(start, month_start)
+        overlap_end = min(end, month_end)
+        overlap_days = (overlap_end - overlap_start).days + 1
+
+        if overlap_days > 0:
+            daily_rate = total_monthly / Decimal(str(days_in_month))
+            total_prorated += daily_rate * Decimal(str(overlap_days))
+
+        # Move to the first of the next month
+        if month_start.month == 12:
+            current = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            current = month_start.replace(month=month_start.month + 1)
+
+    return total_prorated.quantize(Decimal("0.01"))
+
+
+def expenses_for_period(start: Optional[date] = None, end: Optional[date] = None) -> Decimal:
+    """Return the total expenses incurred in a date range."""
+    clauses: list[str] = []
+    params: list[Any] = []
+    if start:
+        clauses.append("date(incurred_date) >= date(?)")
+        params.append(start.isoformat())
+    if end:
+        clauses.append("date(incurred_date) <= date(?)")
+        params.append(end.isoformat())
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+    result = db.query_one(f"SELECT COALESCE(SUM(amount), 0) AS total FROM expenses {where}", params)
+    return utils.to_decimal(result["total"])
+
+    
+
 
 def export_revenue_csv(actor: dict[str, Any] | None, path: str | Path,
-                       start: date | None = None, end: date | None = None) -> Path:
+                       start: Optional[date] = None, end: Optional[date] = None) -> Path:
     """Write a revenue report to a CSV file and return its path."""
     require_admin(actor)
     clauses: list[str] = []

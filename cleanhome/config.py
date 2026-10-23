@@ -142,3 +142,19 @@ SEED_PROMOTIONS: tuple[tuple[str, str, float], ...] = (
 # How long the starter promotions stay valid (in days).
 PROMO_DEFAULT_DAYS = 30
 SEED_PROMOTION_SPAN_DAYS = 730
+
+# ── Seed accounting ──────────────────────────────────────────────────────────────
+# Employees (name, position, monthly_salary).
+SEED_EMPLOYEES: tuple[tuple[str, str, float], ...] = (
+    ("Maria Santos", "Lead Cleaner", 22000.00),
+    ("Juan Dela Cruz", "Cleaner", 15000.00),
+    ("Ana Perez", "Cleaner", 15000.00),
+    ("Carlos Reyes", "Admin", 18000.00),
+)
+
+# Fixed recurring monthly expenses: (category, amount).
+SEED_FIXED_EXPENSES: tuple[tuple[str, float], ...] = (
+    ("rent", 45000.00),
+    ("electricity", 10000.00),
+    ("cleaning_materials", 12000.00),
+)

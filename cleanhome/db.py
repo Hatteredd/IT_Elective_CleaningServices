@@ -82,6 +82,27 @@ SCHEMA = (
     "CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_bookings_scheduled ON bookings(scheduled_at)",
     "CREATE INDEX IF NOT EXISTS idx_promotions_service ON promotions(service_id)",
+    """
+    CREATE TABLE IF NOT EXISTS employees (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        name            TEXT    NOT NULL,
+        position        TEXT,
+        monthly_salary  REAL    NOT NULL,
+        is_active       INTEGER NOT NULL DEFAULT 1,
+        hired_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS expenses (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        category        TEXT    NOT NULL,
+        amount          REAL    NOT NULL,
+        incurred_date   TEXT    NOT NULL,
+        description     TEXT,
+        created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(incurred_date)",
 )
 
 # Columns added after the first release; applied by migrate().
@@ -259,6 +280,8 @@ def seed() -> None:
             )
         connection.commit()
     _seed_promotions(connection)
+    _seed_employees(connection)
+    _seed_expenses(connection)
 
 
 def _seed_promotions(connection: sqlite3.Connection) -> None:
@@ -276,6 +299,39 @@ def _seed_promotions(connection: sqlite3.Connection) -> None:
              start.strftime("%Y-%m-%d %H:%M:%S"),
              end.strftime("%Y-%m-%d %H:%M:%S")),
         )
+    connection.commit()
+
+
+def _seed_employees(connection: sqlite3.Connection) -> None:
+    """Insert demo employees once."""
+    existing = connection.execute("SELECT COUNT(*) AS n FROM employees").fetchone()["n"]
+    if existing:
+        return
+    for name, position, salary in config.SEED_EMPLOYEES:
+        connection.execute(
+            "INSERT INTO employees (name, position, monthly_salary) VALUES (?, ?, ?)",
+            (name, position, salary),
+        )
+    connection.commit()
+
+
+def _seed_expenses(connection: sqlite3.Connection) -> None:
+    """Insert demo recurring monthly expenses for the last six months."""
+    existing = connection.execute("SELECT COUNT(*) AS n FROM expenses").fetchone()["n"]
+    if existing:
+        return
+    from datetime import date
+    today = date.today()
+    # Generate six months of expenses
+    for month_offset in range(5, -1, -1):
+        month = date(today.year - (today.month - 1 - month_offset) // 12,
+                     ((today.month - 1 - month_offset) % 12) + 1, 1)
+        incurred = month.isoformat()
+        for category, amount in config.SEED_FIXED_EXPENSES:
+            connection.execute(
+                "INSERT INTO expenses (category, amount, incurred_date, description) VALUES (?, ?, ?, ?)",
+                (category, amount, incurred, f"{category} expense for {month.strftime('%b %Y')}")
+            )
     connection.commit()
 
 
