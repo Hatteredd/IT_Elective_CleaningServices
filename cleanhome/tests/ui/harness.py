@@ -17,7 +17,7 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from tkinter import messagebox
 
-from cleanhome import config, db, security
+from cleanhome import config, db, security, utils
 from cleanhome.services import auth_service, booking_service, catalog_service
 from cleanhome.ui import components
 from cleanhome.ui.app import CleanHomeApp
@@ -113,11 +113,20 @@ def fresh_database():
     """A throw-away database, so the checks never touch the real one."""
     folder = tempfile.TemporaryDirectory()
     config.DB_PATH = Path(folder.name) / "ui.db"
+    config.BACKUP_DIR = Path(folder.name) / "backups"
     db.close_connection()
     db.init_db()
     db.migrate()
     db.seed()
     return folder
+
+
+def widget_classes(root) -> set[str]:
+    """Every Tk widget class under a widget."""
+    classes = {root.winfo_class()}
+    for child in root.winfo_children():
+        classes.update(widget_classes(child))
+    return classes
 
 
 def open_day(page, start: int = 4, days: int = 7) -> date | None:
@@ -138,6 +147,13 @@ def check_first_run(app: CleanHomeApp) -> None:
     page = current_page(app)
     page.full_name.set("Setup Admin")
     page.email.set("admin@test.ph")
+    page.password.set("abc")
+    page.confirm.set("abc")
+    page._create()
+    app.update()
+    check("a weak first password is refused",
+          app.current == "CreateAdmin" and not auth_service.admin_exists(),
+          app.current)
     page.password.set(PASSWORD)
     page.confirm.set(PASSWORD)
     page._create()
@@ -214,15 +230,24 @@ def check_every_screen(app: CleanHomeApp) -> None:
     print("login screen behavior")
     app.go("Login")
     app.update()
+    app.focus_force()
     page = current_page(app)
     page.email.focus_field()
+    page.email.input.focus_force()
     app.update()
     check("email field can take focus", page.email.input.focus_get() == page.email.input)
+    classes = widget_classes(page)
+    check("the login screen has no role selector",
+          "TRadiobutton" not in classes and "TCombobox" not in classes,
+          sorted(classes))
     page.email.set("customer@test.ph")
     page.password.set("WrongPass123")
     page.email.input.event_generate("<Return>")
     app.update()
-    check("Enter on email submits the login form", not app.session.is_authenticated or app.current == "Login")
+    check("Enter on email submits the login form",
+          not app.session.is_authenticated and page.error_label.cget("text") != "",
+          f"authenticated={app.session.is_authenticated} "
+          f"error={page.error_label.cget('text')!r}")
 
     print("every screen as admin")
     admin = auth_service.login("admin@test.ph", PASSWORD)
@@ -234,6 +259,15 @@ def check_every_screen(app: CleanHomeApp) -> None:
         app.go(name)
         app.update()
         check(f"admin can open {name}", app.current == name, app.current)
+        if name in ("Home", "Services", "Promotions", "About"):
+            check(f"the admin sees no Book Now on {name}",
+                  find_button(app, "Book Now") is None)
+
+    service_id = db.query_one("SELECT id FROM services WHERE is_active = 1 LIMIT 1")["id"]
+    app.go("ServiceDetails", service_id=service_id)
+    app.update()
+    check("the admin sees no Book Now on ServiceDetails",
+          find_button(app, "Book Now") is None)
 
     print("every screen as customer")
     app.session.sign_out()
@@ -369,6 +403,13 @@ def check_booking_flow(app: CleanHomeApp, customer) -> None:
     page.address.set("12 Quezon Ave")
     page._update_quote()
     app.update()
+    summary = page.summary_label.cget("text")
+    breakdown = page.price_label.cget("text")
+    check("the summary shows the service", page.service_var.get() in summary, summary)
+    check("the summary shows the date", utils.format_date(day) in summary, summary)
+    check("the summary shows the time", page.time_var.get() in summary, summary)
+    check("the summary shows the address", "12 Quezon Ave" in summary, summary)
+    check("the price breakdown shows the discount", "Discount" in breakdown, breakdown)
     check("the price is quoted", "Total:" in page.total_label.cget("text"),
           page.total_label.cget("text"))
 
@@ -488,7 +529,8 @@ def check_reports(app: CleanHomeApp) -> None:
     page._copy_summary()
     app.update()
     check("the report summary can be copied",
-          "CleanHome revenue report" in app.clipboard_get())
+          f"{config.COMPANY_NAME} revenue report" in app.clipboard_get(),
+          app.clipboard_get())
 
 
 def check_admin_pages(app: CleanHomeApp) -> None:
@@ -511,6 +553,48 @@ def check_admin_pages(app: CleanHomeApp) -> None:
     app.update()
     page = current_page(app)
     check("the promotions are listed", len(page.table.tree.get_children()) > 0)
+
+
+def check_backup(app: CleanHomeApp) -> None:
+    print("the admin data-safety action")
+    app.go("AdminDashboard")
+    app.update()
+    before = set(config.BACKUP_DIR.glob("cleanhome-*.db")) if config.BACKUP_DIR.exists() else set()
+    button = find_button(app, "Back up database now")
+    check("the dashboard has a backup button", button is not None)
+    if button is None:
+        return
+    button.invoke()
+    app.update()
+    after = set(config.BACKUP_DIR.glob("cleanhome-*.db"))
+    check("the backup button writes a database copy", len(after) == len(before) + 1,
+          f"{len(before)} -> {len(after)}")
+
+
+def check_scaling(app: CleanHomeApp) -> None:
+    print("layout at 100%, 125% and 150% scaling")
+    for percent, scale in ((100, 1.0), (125, 1.25), (150, 1.5)):
+        app.tk.call("tk", "scaling", scale)
+        app.go("Home")
+        app.update_idletasks()
+        app.update()
+        page = current_page(app)
+        footer = getattr(page, "footer", None)
+        check(f"the home page renders at {percent}%",
+              page.winfo_width() > 0 and page.winfo_height() > 0,
+              f"{page.winfo_width()}x{page.winfo_height()}")
+        check(f"the footer is present at {percent}%", footer is not None)
+        if footer is not None:
+            check(f"the footer stays compact at {percent}%",
+                  footer.winfo_height() < page.winfo_height() // 2,
+                  footer.winfo_height())
+            check(f"the footer reaches the page bottom at {percent}%",
+                  abs((footer.winfo_rooty() + footer.winfo_height())
+                      - (page.winfo_rooty() + page.winfo_height())) <= 3,
+                  (footer.winfo_rooty() + footer.winfo_height(),
+                   page.winfo_rooty() + page.winfo_height()))
+    app.tk.call("tk", "scaling", 1.0)
+    app.update()
 
 
 def check_accounts(app: CleanHomeApp) -> None:
@@ -604,6 +688,8 @@ def check_logout(app: CleanHomeApp, admin) -> None:
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     folder = fresh_database()
     try:
         make_user("customer@test.ph", "customer",
@@ -627,6 +713,8 @@ def main() -> int:
             check_admin_flow(app, admin)
             check_reports(app)
             check_admin_pages(app)
+            check_backup(app)
+            check_scaling(app)
             check_forced_password_change(app)
             check_accounts(app)
             check_logout(app, admin)

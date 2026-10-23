@@ -68,6 +68,24 @@ class LockoutTests(ServiceTestCase):
             auth_service.login(self.email, self.password)
         self.assertIn("too many failed attempts", str(caught.exception).lower())
 
+    def test_the_account_works_again_after_the_lockout_expires(self) -> None:
+        from datetime import datetime, timedelta
+
+        from cleanhome import db
+
+        expired = (datetime.now() - timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
+        db.execute(
+            "UPDATE users SET failed_attempts = ?, locked_until = ? WHERE email = ?",
+            (config.MAX_FAILED_LOGINS, expired, self.email),
+        )
+        user = auth_service.login(self.email, self.password)
+        self.assertEqual(user["email"], self.email)
+        state = db.query_one(
+            "SELECT failed_attempts, locked_until FROM users WHERE email = ?",
+            (self.email,))
+        self.assertEqual(state["failed_attempts"], 0)
+        self.assertIsNone(state["locked_until"])
+
     def test_successful_login_clears_the_failure_counter(self) -> None:
         for _ in range(2):
             with self.assertRaises(AuthError):

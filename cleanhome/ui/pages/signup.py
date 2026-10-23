@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
-from cleanhome import theme
+from cleanhome import config, theme
 from cleanhome.services import ValidationError, auth_service
 from cleanhome.ui import components, templates
 
@@ -75,5 +75,6 @@ class Signup(templates.FormMixin, templates.AuthTemplate):
             self.show_field_error(error)
             return
         self.app.sign_in(user)
-        self.app.flash("Your account is ready. Welcome to CleanHome!", "success")
+        self.app.flash(f"Your account is ready. Welcome to {config.COMPANY_NAME}!",
+                       "success")
 

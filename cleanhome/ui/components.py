@@ -252,10 +252,6 @@ class _ClickButton(ttk.Button):
     def __init__(self, parent, text: str, command: Callable | None = None, **kwargs):
         kwargs.setdefault("padding", (theme.BUTTON_PAD_X, theme.BUTTON_PAD_Y))
         super().__init__(parent, text=text, command=command, **kwargs)
-        try:
-            self.configure(height=theme.BUTTON_HEIGHT)
-        except Exception:
-            pass
         self.bind("<Enter>", self._sync_cursor)
         self.bind("<Leave>", self._reset_cursor)
         self.bind("<Configure>", lambda event: self._ensure_height(), add="+")
@@ -265,7 +261,7 @@ class _ClickButton(ttk.Button):
     def _ensure_height(self) -> None:
         try:
             self.configure(height=theme.BUTTON_HEIGHT)
-        except Exception:
+        except tk.TclError:
             pass
 
     def _sync_cursor(self, event: tk.Event | None = None) -> None:
@@ -288,24 +284,14 @@ class PrimaryButton(_ClickButton):
     """The single blue call to action."""
 
     def __init__(self, parent, text: str, command: Callable | None = None, **kwargs):
-        kwargs.setdefault("padding", (theme.BUTTON_PAD_X, theme.BUTTON_PAD_Y))
         super().__init__(parent, text=text, command=command, style="Primary.TButton", **kwargs)
-        try:
-            self.configure(height=theme.BUTTON_HEIGHT)
-        except Exception:
-            pass
 
 
 class SecondaryButton(_ClickButton):
     """A white button with a 1px border."""
 
     def __init__(self, parent, text: str, command: Callable | None = None, **kwargs):
-        kwargs.setdefault("padding", (theme.BUTTON_PAD_X, theme.BUTTON_PAD_Y))
         super().__init__(parent, text=text, command=command, style="Secondary.TButton", **kwargs)
-        try:
-            self.configure(height=theme.BUTTON_HEIGHT)
-        except Exception:
-            pass
 
 
 class DangerButton(_ClickButton):
@@ -748,7 +734,8 @@ class NavBar(tk.Frame):
         brand.pack(side="left", pady=theme.SPACE_MD)
         brand.bind("<Button-1>", lambda e: app.go(app.home_page()))
 
-        badge = tk.Label(inner, text="Metro Manila", bg=theme.PRIMARY_SOFT, fg=theme.PRIMARY,
+        badge = tk.Label(inner, text=config.COMPANY_REGION, bg=theme.PRIMARY_SOFT,
+                         fg=theme.PRIMARY,
                          font=theme.font("CAPTION"), padx=theme.SPACE_SM, pady=theme.SPACE_XS)
         badge.pack(side="left", padx=(theme.SPACE_SM, 0), pady=theme.SPACE_MD)
 

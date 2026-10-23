@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import tkinter as tk
 
 from cleanhome import config, theme, utils
-from cleanhome.services import report_service, booking_service
+from cleanhome.services import ServiceError, booking_service, maintenance_service, report_service
 from cleanhome.ui import components, templates
 
 
@@ -62,3 +63,19 @@ class AdminDashboard(templates.AdminTemplate):
                 components.booking_service_label(booking["status"]),
                 utils.format_peso(booking["total_at_booking"]),
             ))
+
+        safety = templates.section(
+            body, "Data safety",
+            f"Backups are written to {config.BACKUP_DIR}.")
+        components.SecondaryButton(safety, "Back up database now",
+                                   command=self._backup).pack(anchor="w")
+
+    def _backup(self) -> None:
+        """Copy the live database and tell the administrator where it went."""
+        try:
+            target = maintenance_service.create_backup(self.session.user)
+        except (ServiceError, OSError):
+            logging.exception("Database backup failed")
+            self.app.flash("The backup could not be created.", "error")
+            return
+        self.app.flash(f"Backup saved: {target.name}", "success")

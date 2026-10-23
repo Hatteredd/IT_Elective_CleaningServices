@@ -80,10 +80,10 @@ class ServiceDetails(templates.PageTemplate):
 
         actions = tk.Frame(inner, bg=theme.BG_SURFACE)
         actions.pack(anchor="w")
-        if self.session.role == "customer":
+        if self.session.role != "admin":
             components.PrimaryButton(actions, "Book Now",
                                      command=lambda: self.app.go("Book",
-                                                                service_id=service["id"])
+                                                                 service_id=service["id"])
                                      ).pack(side="left", padx=(0, theme.SPACE_SM))
         components.SecondaryButton(actions, "Back to Services",
                                    command=lambda: self.app.go("Services")).pack(side="left")

@@ -7,22 +7,58 @@ instead of hard-coding numbers of their own.
 
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = APP_DIR.parent
 
-DB_PATH = PROJECT_DIR / "cleanhome.db"
-LOG_PATH = PROJECT_DIR / "app.log"
+
+def resolve_data_dir(frozen: bool, local_app_data: str | None) -> Path:
+    """Return the writable folder that holds the database, log, and backups.
+
+    A packaged executable must never write next to the program: the program
+    folder may be read-only or under ``Program Files``. When frozen it uses
+    ``%LOCALAPPDATA%\\CleanHomePH``; when running from source it keeps the
+    database in the project root so development and tests stay simple.
+    """
+    if frozen:
+        base = local_app_data or str(Path.home() / "AppData" / "Local")
+        return Path(base) / "CleanHomePH"
+    return Path(__file__).resolve().parent.parent
+
+
+DATA_DIR = resolve_data_dir(bool(getattr(sys, "frozen", False)),
+                            os.environ.get("LOCALAPPDATA"))
+DB_PATH = DATA_DIR / "cleanhome.db"
+LOG_PATH = DATA_DIR / "app.log"
+BACKUP_DIR = DATA_DIR / "backups"
+
+# ── Company details ───────────────────────────────────────────────────────────
+# Edit this block only. The Home, About, Contact, navigation, and footer read
+# every company detail from here.
+COMPANY_NAME = "CleanHome PH"  # REPLACE BEFORE RELEASE
+COMPANY_TAGLINE = "Metro Manila's trusted home cleaning service."  # REPLACE BEFORE RELEASE
+COMPANY_REGION = "Metro Manila"  # REPLACE BEFORE RELEASE
+COMPANY_EMAIL = "support@cleanhome.ph"  # REPLACE BEFORE RELEASE
+COMPANY_PHONE = "+63 (02) 8123-4567"  # REPLACE BEFORE RELEASE
+COMPANY_ADDRESS = "Makati City, Metro Manila"  # REPLACE BEFORE RELEASE
+COMPANY_HOURS = "8:00 AM - 6:00 PM (Monday to Sunday)"  # REPLACE BEFORE RELEASE
+SERVICE_AREAS = "Makati, Taguig (BGC), Pasig, Mandaluyong, San Juan, Quezon City, Manila"  # REPLACE BEFORE RELEASE
+CURRENCY_SYMBOL = "₱"
+
+# A customer may cancel only this many hours before the scheduled start.
+CANCEL_CUTOFF_HOURS = 24  # REPLACE BEFORE RELEASE if the policy changes
+
+# How many bookings may overlap at the same moment (team capacity).
+MAX_CONCURRENT_BOOKINGS = 3  # REPLACE BEFORE RELEASE if the team size changes
 
 # ── Business rules ────────────────────────────────────────────────────────────
 # Cleaning runs between 8:00 AM and 6:00 PM Philippine Standard Time.
 BUSINESS_OPEN_HOUR = 8
 BUSINESS_CLOSE_HOUR = 18
 SLOT_INTERVAL_MINUTES = 30
-
-# How many bookings may overlap at the same moment (team capacity).
-MAX_CONCURRENT_BOOKINGS = 3
 
 # A booking must be made at least this many hours in advance.
 MIN_LEAD_TIME_HOURS = 3
@@ -35,9 +71,6 @@ DATE_PICKER_DAYS = 60
 
 # How many days back and forward the report date pickers reach.
 REPORT_WINDOW_DAYS = 30
-
-# A customer may cancel only this many hours before the scheduled start.
-CANCEL_CUTOFF_HOURS = 24
 
 # Service duration limits, in minutes.
 MIN_DURATION_MINUTES = 15
@@ -103,13 +136,3 @@ SEED_PROMOTIONS: tuple[tuple[str, str, float], ...] = (
 # How long the starter promotions stay valid (in days).
 PROMO_DEFAULT_DAYS = 30
 SEED_PROMOTION_SPAN_DAYS = 730
-
-# ── Company details (edit these to match your own business) ─────────────────
-COMPANY_NAME = "CleanHome PH"
-COMPANY_TAGLINE = "Metro Manila's trusted home cleaning service."
-COMPANY_EMAIL = "support@cleanhome.ph"
-COMPANY_PHONE = "+63 (02) 8123-4567"
-COMPANY_ADDRESS = "Makati City, Metro Manila"
-COMPANY_HOURS = "8:00 AM - 6:00 PM (Monday to Sunday)"
-SERVICE_AREAS = "Makati, Taguig (BGC), Pasig, Mandaluyong, San Juan, Quezon City, Manila"
-CURRENCY_SYMBOL = "₱"

@@ -101,7 +101,7 @@ class AddAdminDialog(components.FormDialog):
         self.name = components.FormField(self.body, "Full name")
         self.name.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.email = components.FormField(self.body, "Email",
-                                          placeholder="name@cleanhome.ph")
+                                          placeholder="name@example.com")
         self.email.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.password = components.FormField(self.body, "Password", secret=True)
         self.password.pack(fill="x", pady=(0, theme.SPACE_MD))

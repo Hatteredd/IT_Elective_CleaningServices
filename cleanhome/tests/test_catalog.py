@@ -205,6 +205,47 @@ class ReportTests(ServiceTestCase):
         self.assertGreaterEqual(len(rows), 1)
         self.assertIn("Service", rows[0][0] + " " + " ".join(rows[0]))
 
+    def test_the_report_totals_each_status_and_counts_only_completed_revenue(self) -> None:
+        start = datetime.now() - timedelta(days=1)
+        end = datetime.now() + timedelta(days=30)
+        for status in ("confirmed", "in_progress", "completed"):
+            booking_service.change_status(self.admin, self.booking["id"], status)
+        when = datetime.combine(datetime.now().date() + timedelta(days=4),
+                                datetime.min.time()).replace(hour=11)
+        cancelled = booking_service.create_booking(self.customer, self.service["id"],
+                                                   when, "12 Quezon Ave")
+        booking_service.cancel_booking(self.customer, cancelled["id"], "Plans changed")
+
+        report = report_service.revenue_report(self.admin, start, end)
+        self.assertEqual(report["total_bookings"], 2)
+        self.assertEqual(report["completed"], 1)
+        self.assertEqual(report["cancelled"], 1)
+        self.assertEqual(float(report["revenue"]), 1000.0)
+        self.assertEqual(len(report["revenue_per_service"]), 1)
+        self.assertEqual(report["revenue_per_service"][0]["service_name"], "Standard Clean")
+        self.assertEqual(float(report["revenue_per_service"][0]["revenue"]), 1000.0)
+
+    def test_the_csv_has_a_header_and_one_row_per_booking(self) -> None:
+        start = datetime.now() - timedelta(days=1)
+        end = datetime.now() + timedelta(days=30)
+        for status in ("confirmed", "in_progress", "completed"):
+            booking_service.change_status(self.admin, self.booking["id"], status)
+        when = datetime.combine(datetime.now().date() + timedelta(days=4),
+                                datetime.min.time()).replace(hour=11)
+        second = booking_service.create_booking(self.customer, self.service["id"],
+                                                when, "12 Quezon Ave")
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "report.csv"
+            report_service.export_revenue_csv(self.admin, str(path), start, end)
+            with path.open(newline="", encoding="utf-8") as handle:
+                rows = list(csv.reader(handle))
+        self.assertEqual(rows[0], ["Booking ID", "Scheduled At", "Customer", "Service",
+                                   "Status", "Price", "Discount", "Total"])
+        ids = {int(row[0]) for row in rows[1:]}
+        self.assertEqual(ids, {self.booking["id"], second["id"]})
+        first_row = next(row for row in rows[1:] if int(row[0]) == self.booking["id"])
+        self.assertEqual(first_row[5:], ["1000.00", "0.00", "1000.00"])
+
     def test_a_customer_cannot_export_a_report(self) -> None:
         with self.assertRaises(PermissionDenied):
             with tempfile.TemporaryDirectory() as folder:

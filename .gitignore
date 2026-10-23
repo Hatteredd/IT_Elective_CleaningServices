@@ -38,3 +38,13 @@ cleanhome.db-wal
 
 # Pre-rewrite backup of the original project
 backup_original/
+
+# Local database backups and packaging output
+backups/
+dist/
+build/
+release/
+*.spec
+
+# Test cache
+.pytest_cache/

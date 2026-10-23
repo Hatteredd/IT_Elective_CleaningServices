@@ -13,6 +13,7 @@ from cleanhome.ui.app import CleanHomeApp
 
 def setup_logging() -> None:
     """Write logs to disk without breaking the Tkinter loop."""
+    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         filename=config.LOG_PATH,
         level=logging.INFO,
@@ -26,21 +27,21 @@ def main() -> None:
         import ctypes
 
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:
+    except (AttributeError, OSError):
         pass
-    try:
-        import tkinter as tk
+    import tkinter as tk
 
+    try:
         root_probe = tk.Tk()
         root_probe.withdraw()
         try:
             root_probe.tk.call("tk", "scaling", 1.0)
         finally:
             root_probe.destroy()
-    except Exception:
+    except tk.TclError:
         pass
     setup_logging()
-    logging.info("Starting CleanHome")
+    logging.info("Starting CleanHome from %s", config.DATA_DIR)
     db.init_db()
     db.migrate()
     db.seed()

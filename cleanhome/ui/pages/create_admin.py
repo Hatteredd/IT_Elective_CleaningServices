@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
-from cleanhome import theme
+from cleanhome import config, theme
 from cleanhome.services import ConflictError, ServiceError, ValidationError, auth_service
 from cleanhome.ui import components, templates
 
@@ -22,7 +22,8 @@ class CreateAdmin(templates.FormMixin, templates.AuthTemplate):
         card.pack()
         inner = templates.card_body(card)
 
-        components.HeadingLabel(inner, text="Set up CleanHome", surface=True).pack(anchor="w")
+        components.HeadingLabel(inner, text=f"Set up {config.COMPANY_NAME}",
+                                surface=True).pack(anchor="w")
         components.BodyLabel(
             inner, text="This computer has no administrator yet. Create the first "
                        "account to start managing services, bookings and customers.",
@@ -31,7 +32,7 @@ class CreateAdmin(templates.FormMixin, templates.AuthTemplate):
 
         self.full_name = components.FormField(inner, "Full name")
         self.full_name.pack(fill="x", pady=(0, theme.SPACE_MD))
-        self.email = components.FormField(inner, "Email", placeholder="you@cleanhome.ph")
+        self.email = components.FormField(inner, "Email", placeholder="you@example.com")
         self.email.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.phone = components.FormField(inner, "Mobile number (optional)")
         self.phone.pack(fill="x", pady=(0, theme.SPACE_MD))

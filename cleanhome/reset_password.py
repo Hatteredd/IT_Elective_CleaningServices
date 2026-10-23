@@ -55,8 +55,7 @@ def list_admins() -> int:
     accounts = _admins()
     if not accounts:
         print("There is no administrator account in the database yet.")
-        print("Start the app once and use the setup screen:")
-        print("    python main.py")
+        print("Start CleanHome once and use the Create Admin Account screen.")
         return 1
     print("Administrator accounts:")
     for account in accounts:
@@ -137,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not config.DB_PATH.exists():
         print(f"No database found at {config.DB_PATH}.")
-        print("Run the app once first:  python main.py")
+        print("Start CleanHome once first so it can create the database.")
         return 1
 
     try:

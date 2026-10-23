@@ -104,7 +104,7 @@ class AdminReports(templates.AdminTemplate):
             return
         start, end = getattr(self, "_range", (None, None))
         lines = [
-            f"CleanHome revenue report: {start} to {end}",
+            f"{config.COMPANY_NAME} revenue report: {start} to {end}",
             f"Total bookings: {report['total_bookings']}",
             f"Completed: {report['completed']}",
             f"Cancelled: {report['cancelled']}",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
-from cleanhome import theme
+from cleanhome import config, theme
 from cleanhome.services import AuthError, ValidationError, auth_service
 from cleanhome.ui import components, templates
 
@@ -45,7 +45,8 @@ class Login(templates.FormMixin, templates.AuthTemplate):
 
         footer = tk.Frame(inner, bg=theme.BG_SURFACE)
         footer.pack(anchor="w", pady=(theme.SPACE_LG, 0))
-        components.CaptionLabel(footer, text="New to CleanHome?", surface=True).pack(side="left")
+        components.CaptionLabel(footer, text=f"New to {config.COMPANY_NAME}?",
+                                surface=True).pack(side="left")
         link = components.CaptionLabel(footer, text="Create an account", cursor="hand2",
                                        surface=True)
         link.pack(side="left", padx=(theme.SPACE_XS, 0))

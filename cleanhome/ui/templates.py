@@ -59,7 +59,8 @@ class PageTemplate(Page):
         self.scroller.canvas.bind("<Configure>", self._fit_content_width, add="+")
 
         if self.show_footer:
-            components.Footer(self, self.app).grid(row=2, column=0, sticky="ew")
+            self.footer = components.Footer(self, self.app)
+            self.footer.grid(row=2, column=0, sticky="ew")
 
     def _fit_content_width(self, event) -> None:
         """Centre the body and keep it from growing past ``CONTENT_MAX_WIDTH``."""

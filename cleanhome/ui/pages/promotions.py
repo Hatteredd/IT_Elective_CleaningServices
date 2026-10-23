@@ -32,6 +32,7 @@ class Promotions(templates.PageTemplate):
             components.BodyLabel(inner, text="No promotions are running at the moment.", surface=True).pack(anchor="w")
             return
 
+        can_book = self.session.role != "admin"
         grid = tk.Frame(body, bg=theme.BG_PAGE)
         grid.pack(fill="both", expand=True)
         for column in range(theme.CARD_COLUMNS):
@@ -45,6 +46,6 @@ class Promotions(templates.PageTemplate):
                         pady=(0, theme.SPACE_MD))
             components.PromoCard(
                 holder, promo,
-                on_book=lambda p=promo: self.app.go("Book",
-                                                   service_id=p.get("service_id")),
+                on_book=(lambda p=promo: self.app.go(
+                    "Book", service_id=p.get("service_id"))) if can_book else None,
             ).pack(fill="both", expand=True)

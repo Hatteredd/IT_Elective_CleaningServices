@@ -12,6 +12,7 @@ import sqlite3
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Iterable, Iterator, Sequence
 
 from cleanhome import config
@@ -113,6 +114,35 @@ def _open() -> sqlite3.Connection:
     connection.execute("PRAGMA journal_mode = WAL")
     connection.execute(f"PRAGMA busy_timeout = {config.DB_BUSY_TIMEOUT_MS}")
     return connection
+
+
+def backup_database(destination_dir: Path | None = None) -> Path:
+    """Copy the live database to a timestamped file and return its path.
+
+    SQLite's online backup API is safe while the app is running: it copies a
+    consistent snapshot, including data still in the write-ahead log.
+    """
+    target_dir = Path(destination_dir) if destination_dir is not None else config.BACKUP_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    target = target_dir / f"cleanhome-{stamp}.db"
+    suffix = 1
+    while target.exists():
+        target = target_dir / f"cleanhome-{stamp}-{suffix}.db"
+        suffix += 1
+    source = get_connection()
+    destination = sqlite3.connect(target)
+    try:
+        with _lock:
+            source.backup(destination)
+    except sqlite3.Error as error:
+        destination.close()
+        target.unlink(missing_ok=True)
+        raise _friendly_error(error) from error
+    else:
+        destination.close()
+    logging.info("Database backed up to %s", target)
+    return target
 
 
 def close_connection() -> None:

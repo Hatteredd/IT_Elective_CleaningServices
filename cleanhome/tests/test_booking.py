@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import date, datetime, time, timedelta
 
-from cleanhome import config
+from cleanhome import config, db
 from cleanhome.services import (ConflictError, PermissionDenied, ValidationError,
                                 booking_service, catalog_service)
 from cleanhome.tests.base import ServiceTestCase
@@ -203,6 +203,17 @@ class PriceTests(ServiceTestCase):
         self.assertEqual(float(booking["discount_at_booking"]), 100.0)
         self.assertEqual(float(booking["total_at_booking"]), 900.0)
 
+    def test_a_later_price_change_does_not_rewrite_a_booking(self) -> None:
+        for promo in catalog_service.list_promotions():
+            catalog_service.end_promotion(self.admin, promo["id"])
+        booking = booking_service.create_booking(self.customer, self.service["id"],
+                                                  self.when, "12 Quezon Ave")
+        catalog_service.update_service(self.admin, self.service["id"], "Standard Clean",
+                                       "A test service", 1500.0, 60)
+        stored = booking_service.get_booking(booking["id"])
+        self.assertEqual(float(stored["price_at_booking"]), 1000.0)
+        self.assertEqual(float(stored["total_at_booking"]), 1000.0)
+
 
 class StatusFlowTests(ServiceTestCase):
     """The status of a booking may only move forward."""
@@ -220,6 +231,25 @@ class StatusFlowTests(ServiceTestCase):
         for status in ("confirmed", "in_progress", "completed"):
             booking = booking_service.change_status(self.admin, self.booking["id"], status)
             self.assertEqual(booking["status"], status)
+
+    def test_pending_cannot_jump_straight_to_completed(self) -> None:
+        with self.assertRaises(ConflictError):
+            booking_service.change_status(self.admin, self.booking["id"], "completed")
+
+    def test_a_customer_cannot_cancel_inside_the_cutoff(self) -> None:
+        soon = datetime.now() + timedelta(hours=config.MIN_LEAD_TIME_HOURS + 1)
+        cursor = db.execute(
+            "INSERT INTO bookings (user_id, service_id, scheduled_at, address, "
+            "price_at_booking, discount_at_booking, status) "
+            "VALUES (?, ?, ?, ?, ?, 0, 'pending')",
+            (self.customer["id"], self.service["id"],
+             soon.strftime("%Y-%m-%d %H:%M:%S"), "12 Quezon Ave", 1000.0),
+        )
+        booking_id = int(cursor.lastrowid)
+        with self.assertRaises(ConflictError) as caught:
+            booking_service.cancel_booking(self.customer, booking_id, "Too late")
+        self.assertIn(str(config.CANCEL_CUTOFF_HOURS), str(caught.exception))
+        self.assertEqual(booking_service.get_booking(booking_id)["status"], "pending")
 
     def test_a_completed_booking_cannot_go_back_to_pending(self) -> None:
         booking_service.change_status(self.admin, self.booking["id"], "confirmed")

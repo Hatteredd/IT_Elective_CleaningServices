@@ -17,6 +17,7 @@ class Home(templates.PageTemplate):
     def build(self, **kwargs) -> None:
         super().build(**kwargs)
         body = self.body
+        can_book = self.session.role != "admin"
 
         hero = templates.card(body)
         hero.pack(fill="x")
@@ -36,9 +37,10 @@ class Home(templates.PageTemplate):
                                                       pady=(theme.SPACE_MD, 0))
         actions = tk.Frame(left, bg=theme.BG_SURFACE)
         actions.pack(anchor="w", pady=(theme.SPACE_LG, 0))
-        components.PrimaryButton(actions, "Book a Cleaning",
-                                 command=lambda: self.app.go("Book")).pack(side="left",
-                                                                        padx=(0, theme.SPACE_SM))
+        if can_book:
+            components.PrimaryButton(actions, "Book a Cleaning",
+                                     command=lambda: self.app.go("Book")).pack(
+                side="left", padx=(0, theme.SPACE_SM))
         components.SecondaryButton(actions, "View Services",
                                    command=lambda: self.app.go("Services")).pack(side="left")
 
@@ -73,8 +75,8 @@ class Home(templates.PageTemplate):
                             padx=(0 if index == 0 else theme.SPACE_SM, 0))
                 components.PromoCard(
                     holder, promo,
-                    on_book=lambda p=promo: self.app.go("Book",
-                                                       service_id=p.get("service_id")),
+                    on_book=(lambda p=promo: self.app.go(
+                        "Book", service_id=p.get("service_id"))) if can_book else None,
                 ).pack(fill="both", expand=True)
 
         services_section = templates.section(
@@ -92,12 +94,13 @@ class Home(templates.PageTemplate):
                         padx=(0 if index == 0 else theme.SPACE_SM, 0))
             components.ServiceCard(
                 holder, service,
-                on_book=lambda s=service: self.app.go("Book", service_id=s["id"]),
+                on_book=(lambda s=service: self.app.go("Book", service_id=s["id"]))
+                if can_book else None,
                 on_details=lambda s=service: self.app.go("ServiceDetails", service_id=s["id"]),
                 featured=index == 0,
             ).pack(fill="both", expand=True)
 
-        why = templates.section(body, "Why CleanHome",
+        why = templates.section(body, f"Why {config.COMPANY_NAME}",
                                 "What you can expect every time we visit.")
         why_row = tk.Frame(why, bg=theme.BG_PAGE)
         why_row.pack(fill="x")

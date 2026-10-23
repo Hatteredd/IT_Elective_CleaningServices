@@ -79,6 +79,30 @@ class RegistrationTests(ServiceTestCase):
         self.assertNotEqual(row["pw_hash"], row["pw_salt"])
 
 
+class FirstRunTests(ServiceTestCase):
+    """The setup screen guards the very first administrator."""
+
+    def create(self, password: str = "GoodPass123",
+               confirm: str | None = None) -> dict:
+        return auth_service.create_first_admin(
+            "Setup Admin", "admin@test.ph", "09171234567", password,
+            password if confirm is None else confirm)
+
+    def test_a_weak_password_is_rejected_and_no_admin_is_created(self) -> None:
+        for weak in ("short", "onlyletters", "12345678"):
+            with self.assertRaises(ValidationError) as caught:
+                self.create(password=weak, confirm=weak)
+            self.assertEqual(caught.exception.field, "password")
+        self.assertFalse(auth_service.admin_exists())
+
+    def test_the_first_admin_is_created_once(self) -> None:
+        created = self.create()
+        self.assertEqual(created["role"], "admin")
+        self.assertTrue(auth_service.admin_exists())
+        with self.assertRaises(ConflictError):
+            self.create()
+
+
 class ProfileTests(ServiceTestCase):
     """Editing a profile and changing a password."""
 

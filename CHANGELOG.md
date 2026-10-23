@@ -3,6 +3,66 @@
 All notable changes to CleanHome PH are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased] — 23 October 2026: final acceptance pass
+
+### Added
+
+* **Backups.** `db.backup_database()` uses SQLite's online backup API. The
+  admin dashboard has a **Back up database now** button, and
+  `python -m cleanhome.backup` writes a timestamped copy from the console.
+  Both write to `backups/` inside the data folder.
+* **`CleanHomeTools.exe`** — a console companion for the packaged app with
+  `backup` and `reset-password` commands (`cleanhome/tools.py`).
+* **Data folder for the packaged app.** A frozen build now writes the
+  database, log, and backups to `%LOCALAPPDATA%\CleanHomePH`; source runs
+  keep them in the project folder. Added `resolve_data_dir()` so this is
+  testable.
+* **Company details block** in `config.py` with `REPLACE BEFORE RELEASE`
+  markers for the name, tagline, region, email, phone, address, hours,
+  service areas, cancellation window, capacity, and currency.
+* **Tests** for the first-run password policy, lockout expiry, cancelling
+  inside the cutoff, invalid status jumps, stored prices after a catalogue
+  change, persistence across close/reopen, exact report totals and CSV rows,
+  backups, and data paths.
+* The UI harness now checks the weak-password refusal, the absent login role
+  selector, the booking summary (service/date/time/address/price/discount),
+  the hidden admin **Book Now** buttons, the dashboard backup, and layout at
+  100/125/150% scaling including the footer.
+* `build_exe.bat` now builds one-file `CleanHomePH.exe` and
+  `CleanHomeTools.exe` with `--paths`.
+
+### Changed
+
+* The booking summary now includes the chosen time and always shows a
+  discount line, including `-₱0.00` when no promotion applies.
+* Administrators no longer see **Book Now** (or other booking calls to
+  action) on Home, Services, Promotions, About, or Service details.
+* `README.md` documents first run, data locations, backups, resets, company
+  placeholders, tests, packaging, and the release contents.
+* `.gitignore` now covers `dist/`, `build/`, `release/`, `*.spec`,
+  `backups/`, and `.pytest_cache/`.
+* `theme.py` lost unused tokens (`INPUT_PAD_X`, `INPUT_PAD_Y`, `NAV_HEIGHT`,
+  `FOOTER_HEIGHT`); the duplicate button-height blocks were removed.
+* `PageTemplate` keeps a reference to its footer, so layout checks can
+  measure it.
+
+### Fixed
+
+* `main.py` and `components.py` no longer use `except Exception`; the
+  handlers now catch the exceptions they actually expect.
+* `report_service.py` dropped an unused `datetime` import.
+* Removed the generated `cleanhome.db`, `app.log`, `__pycache__` folders,
+  and the stray `ui that i like.webp` asset.
+* `AUDIT.md` was deleted; it described the pre-rewrite Flask/SQLAlchemy app
+  and no longer matched this codebase. Its remaining useful notes are in the
+  Phase 1 section below.
+
+### Verification
+
+* `python -m unittest discover -s cleanhome/tests -t .` — 122 tests, OK.
+* `python -m cleanhome.tests.ui.harness` — every scenario passes, including
+  the new backup and scaling checks.
+
 ## [Unreleased] — 22 October 2026: UI cleanup and verification
 
 ### Changed

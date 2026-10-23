@@ -82,6 +82,7 @@ class Services(templates.PageTemplate):
             empty.grid(row=0, column=0, columnspan=theme.CARD_COLUMNS, sticky="ew")
             components.BodyLabel(empty, text="No service matches that search.", surface=False).pack(anchor="w")
             return
+        can_book = self.session.role != "admin"
         for index, service in enumerate(matches):
             row, column = divmod(index, theme.CARD_COLUMNS)
             holder = tk.Frame(self.grid, bg=theme.BG_PAGE)
@@ -91,6 +92,7 @@ class Services(templates.PageTemplate):
                         pady=(0, theme.SPACE_MD))
             components.ServiceCard(
                 holder, service,
-                on_book=lambda s=service: self.app.go("Book", service_id=s["id"]),
+                on_book=(lambda s=service: self.app.go("Book", service_id=s["id"]))
+                if can_book else None,
                 on_details=lambda s=service: self.app.go("ServiceDetails", service_id=s["id"]),
             ).pack(fill="both", expand=True)

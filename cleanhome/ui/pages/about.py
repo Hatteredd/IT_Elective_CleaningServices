@@ -18,7 +18,7 @@ class About(templates.PageTemplate):
         body = self.body
 
         header = templates.page_header(
-            body, "About CleanHome",
+            body, f"About {config.COMPANY_NAME}",
             f"{config.COMPANY_NAME} is a home cleaning service covering "
             f"{config.SERVICE_AREAS}.")
         header.pack(fill="x")
@@ -29,7 +29,7 @@ class About(templates.PageTemplate):
         components.SubheadingLabel(story_inner, text="What we do", surface=True).pack(anchor="w")
         components.BodyLabel(story_inner,
                  text="We send background-checked cleaners to homes and offices across "
-                      "Metro Manila. Every cleaning includes our own supplies, a fixed "
+                      f"{config.COMPANY_REGION}. Every cleaning includes our own supplies, a fixed "
                       "price agreed before the visit, and a cleaner who is paid on the "
                       "quality of the work, not the clock.",
                  wraplength=theme.WRAP_FULL, justify="left", surface=True).pack(anchor="w",
@@ -62,6 +62,7 @@ class About(templates.PageTemplate):
                  justify="left", surface=True).pack(anchor="w", pady=(theme.SPACE_SM, 0))
         components.CaptionLabel(areas_inner, text=config.COMPANY_HOURS, surface=True).pack(anchor="w",
                                                                        pady=(theme.SPACE_XS, 0))
-        components.SecondaryButton(areas_inner, "Book a Cleaning",
-                                   command=lambda: self.app.go("Book")).pack(anchor="w",
-                                                                             pady=(theme.SPACE_MD, 0))
+        if self.session.role != "admin":
+            components.SecondaryButton(areas_inner, "Book a Cleaning",
+                                       command=lambda: self.app.go("Book")).pack(
+                anchor="w", pady=(theme.SPACE_MD, 0))

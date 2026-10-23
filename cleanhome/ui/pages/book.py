@@ -55,7 +55,9 @@ class Book(templates.PageTemplate):
 
         components.CaptionLabel(inner, text="Time", surface=True).pack(anchor="w")
         self.time_var = tk.StringVar()
-        self.time_box = components.Dropdown(inner, [], textvariable=self.time_var, width=theme.DROPDOWN_WIDTH)
+        self.time_box = components.Dropdown(inner, [], textvariable=self.time_var,
+                                            width=theme.DROPDOWN_WIDTH,
+                                            on_change=lambda value: self._update_quote())
         self.time_box.pack(anchor="w", pady=(theme.SPACE_XS, theme.SPACE_MD))
         self.slots: list[datetime] = []
 
@@ -135,6 +137,8 @@ class Book(templates.PageTemplate):
             parts.append(service["name"])
         if day:
             parts.append(utils.format_date(day))
+        if self.time_var.get():
+            parts.append(self.time_var.get())
         if address:
             parts.append(address)
         self.summary_label.configure(text="  •  ".join(parts) if parts else "—")
@@ -143,15 +147,27 @@ class Book(templates.PageTemplate):
             self.total_label.configure(text="")
             return
         day = day or date.today()
-        when = datetime.combine(day, time(config.BUSINESS_OPEN_HOUR, 0))
+        when = self._selected_slot() or datetime.combine(
+            day, time(config.BUSINESS_OPEN_HOUR, 0))
         q = booking_service.quote(service["id"], when)
         discount = q["discount"]
         total = q["total"]
-        lines = [f"Price: {utils.format_peso(q['price'])}"]
         if discount > 0 and q["promo"]:
-            lines.append(f"Promo ({q['promo']['title']}): -{utils.format_peso(discount)}")
-        self.price_label.configure(text="  •  ".join(lines))
+            discount_text = f"Discount ({q['promo']['title']}): -{utils.format_peso(discount)}"
+        else:
+            discount_text = f"Discount: -{utils.format_peso(0)}"
+        self.price_label.configure(
+            text=f"Price: {utils.format_peso(q['price'])}  •  {discount_text}")
         self.total_label.configure(text=f"Total: {utils.format_peso(total)}")
+
+    def _selected_slot(self) -> datetime | None:
+        choice = self.time_var.get()
+        if not choice:
+            return None
+        for slot in self.slots:
+            if slot.strftime("%I:%M %p").lstrip("0") == choice:
+                return slot
+        return None
 
     def _show_error(self, message: str) -> None:
         self.error_label.configure(text=message)
@@ -175,12 +191,7 @@ class Book(templates.PageTemplate):
         if not self.time_var.get() or not self.slots:
             self._show_error("Pick a date and an available time.")
             return
-        choice = self.time_var.get()
-        when = None
-        for slot in self.slots:
-            if slot.strftime("%I:%M %p").lstrip("0") == choice:
-                when = slot
-                break
+        when = self._selected_slot()
         if when is None:
             self._show_error("That time slot is no longer available.")
             return

@@ -13,6 +13,8 @@ it, the folder map, the business rules, and the known limitations — is in
 | `db.py` | the connection, the schema, the migrations, and the seed data |
 | `security.py` | PBKDF2 hashing, the password policy, random passwords |
 | `reset_password.py` | the command-line tool that resets a locked-out admin password |
+| `backup.py` | the command-line tool that copies the database |
+| `tools.py` | the dispatcher behind `CleanHomeTools.exe` |
 | `services/` | the logic layer — it never imports tkinter |
 | `ui/` | the interface: components, templates, the router, and the pages |
 | `tests/` | the unit tests, plus a manual UI harness |
