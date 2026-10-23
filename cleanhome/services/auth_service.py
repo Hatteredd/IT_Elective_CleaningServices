@@ -244,7 +244,7 @@ def change_password(actor: dict[str, Any], current_password: str,
 
 
 def update_profile(actor: dict[str, Any], full_name: str, phone: str,
-                   address: str) -> dict[str, Any]:
+                   address: str, email: str | None = None) -> dict[str, Any]:
     """Update the signed-in user's own profile."""
     if not actor:
         raise AuthError("You must be signed in to edit your profile.")
@@ -255,10 +255,22 @@ def update_profile(actor: dict[str, Any], full_name: str, phone: str,
         raise ValidationError(
             f"Address must be {config.MAX_ADDRESS_LENGTH} characters or fewer.", "address"
         )
-    db.execute(
-        "UPDATE users SET full_name = ?, phone = ?, address = ? WHERE id = ?",
-        (clean_name, clean_phone, clean_address, actor["id"]),
-    )
+    
+    params = [clean_name, clean_phone, clean_address]
+    sql = "UPDATE users SET full_name = ?, phone = ?, address = ?"
+    
+    if email:
+        clean_email = _clean_email(email)
+        # Check if email is already taken by another user
+        if db.query_one("SELECT id FROM users WHERE email = ? AND id != ?", (clean_email, actor["id"])):
+            raise ValidationError("An account with this email already exists.", "email")
+        sql += ", email = ?"
+        params.append(clean_email)
+        
+    sql += " WHERE id = ?"
+    params.append(actor["id"])
+    
+    db.execute(sql, tuple(params))
     return get_user(actor["id"]) or {}
 
 

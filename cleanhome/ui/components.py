@@ -559,7 +559,9 @@ class NavItem(tk.Frame):
     """A navigation link: active pill plus a 2px blue accent underline."""
 
     def __init__(self, parent, text: str, command: Callable, active: bool = False, **kwargs):
-        super().__init__(parent, bg=theme.BG_SURFACE, **kwargs)
+        super().__init__(parent, bg=theme.BORDER if not active else theme.BG_SURFACE, 
+                         highlightbackground=theme.BORDER, highlightthickness=1 if not active else 0,
+                         **kwargs)
         self._active = active
         background = theme.PRIMARY_SOFT if active else theme.BG_SURFACE
         foreground = theme.PRIMARY if active else theme.TEXT
@@ -866,11 +868,8 @@ class NavBar(tk.Frame):
                  font=theme.font("BODY")).pack(side="left", padx=theme.SPACE_SM)
         SecondaryButton(parent, "My Profile",
                         command=lambda: app.go("Profile")).pack(side="left", padx=theme.SPACE_XS)
-        SecondaryButton(parent, "Change Password",
-                        command=lambda: app.go("ChangePassword")).pack(side="left",
-                                                                       padx=theme.SPACE_XS)
-        SecondaryButton(parent, "Log Out", command=app.logout).pack(side="left",
-                                                                    padx=theme.SPACE_XS)
+        DangerButton(parent, "Log Out", command=app.logout).pack(side="left",
+                                                                 padx=theme.SPACE_XS)
 
 
 class ServiceCard(tk.Frame):

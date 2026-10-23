@@ -11,16 +11,16 @@ from tkinter import font as tkfont
 from tkinter import ttk
 
 # ── Colours ──────────────────────────────────────────────────────────────────
-BG_PAGE = "#F5F6F8"      # page background (very light gray)
+BG_PAGE = "#FAFAFA"      # page background (ultra light neutral)
 BG_SURFACE = "#FFFFFF"   # cards, panels, header
-BORDER = "#E5E7EB"       # 1px card borders (fake shadow edge)
-SHADOW_EDGE = "#D9DCE1"  # 1px bottom/right edge to fake a soft shadow
-PRIMARY = "#0A6CF0"      # buttons, links, prices, active nav
-PRIMARY_HOVER = "#0856C4"
+BORDER = "#E4E4E7"       # 1px crisp border
+SHADOW_EDGE = "#E4E4E7"  # kept for compatibility, unused in Atomic Grid
+PRIMARY = "#0070F3"      # digital blue accent
+PRIMARY_HOVER = "#0059C1"
 PRIMARY_SOFT = "#E8F1FE"  # active nav pill, selected rows, badges bg
-TEXT = "#000000"         # headings
-TEXT_BODY = "#666666"    # body text
-TEXT_MUTED = "#9CA3AF"   # captions, hints
+TEXT = "#09090B"         # high-contrast primary text
+TEXT_BODY = "#18181B"    # body paragraphs
+TEXT_MUTED = "#666666"   # captions, hints
 DANGER = "#E5484D"       # errors
 DANGER_SOFT = "#FDECEC"
 SUCCESS = "#12A150"      # confirmed / completed
@@ -34,7 +34,8 @@ TOGGLE_ON = PRIMARY      # a switch that is on
 TOGGLE_OFF = "#D1D5DB"   # a switch that is off
 TOGGLE_THUMB = "#FFFFFF"  # the knob of a switch
 CHECK_MARK = PRIMARY     # the tick inside a checked box
-BG_ROW_ALT = "#FAFAFB"   # every other row of a table
+BG_ROW_ALT = "#FAFAFA"   # every other row of a table
+BG_INPUT_IDLE = "#F4F4F5"  # muted surface accents for inputs/tabs
 PRIMARY_DISABLED = "#B9C6D4"
 PRIMARY_DISABLED_TEXT = "#F0F3F6"
 DANGER_HOVER = "#C43B40"
@@ -186,9 +187,11 @@ def detect_fonts() -> str:
 
 # Type scale tokens: (size, weight)
 SCALE = {
+    # Semantic aliases for documentation
+    # TITLE = "H1", SUBHEADING = "H2", BODY_TEXT = "BODY", CAPTION_TEXT = "CAPTION"
     "H1": (24, "bold"),
-    "H2": (16, "bold"),
-    "BODY": (11, "normal"),
+    "H2": (14, "bold"),
+    "BODY": (12, "normal"),
     "CAPTION": (10, "normal"),
     "PRICE": (16, "bold"),
 }
@@ -214,7 +217,7 @@ def configure_style(root: tk.Misc) -> None:
     style.configure("TLabel", background=BG_PAGE, foreground=TEXT, font=font("BODY"))
     style.configure("Caption.TLabel", font=font("CAPTION"), foreground=TEXT_MUTED)
 
-    style.configure("TEntry", fieldbackground=BG_SURFACE, bordercolor=BORDER,
+    style.configure("TEntry", fieldbackground=BG_INPUT_IDLE, bordercolor=BORDER,
                     lightcolor=BORDER, darkcolor=BORDER, padding=(10, 8),
                     insertcolor=TEXT)
     style.map("TEntry",
@@ -231,14 +234,14 @@ def configure_style(root: tk.Misc) -> None:
               bordercolor=[("focus", BG_SURFACE)],
               lightcolor=[("focus", BG_SURFACE)],
               darkcolor=[("focus", BG_SURFACE)])
-    style.configure("Primary.TButton", padding=(BUTTON_PAD_X, BUTTON_PAD_Y), font=font("BODY"),
+    style.configure("Primary.TButton", relief="flat", padding=(12, 8), font=font("BODY"),
                     background=PRIMARY, foreground=TEXT_ON_ACCENT, borderwidth=0,
                     focusthickness=0)
     style.map("Primary.TButton",
               background=[("pressed", PRIMARY_HOVER), ("active", PRIMARY_HOVER), ("disabled", PRIMARY_DISABLED)],
               foreground=[("disabled", PRIMARY_DISABLED_TEXT)])
 
-    style.configure("Secondary.TButton", padding=(BUTTON_PAD_X, BUTTON_PAD_Y), font=font("BODY"),
+    style.configure("Secondary.TButton", relief="flat", padding=(12, 8), font=font("BODY"),
                     background=BG_SURFACE, foreground=TEXT, borderwidth=1)
     style.map("Secondary.TButton",
               background=[("pressed", BG_PAGE), ("active", BG_PAGE), ("disabled", BG_SURFACE)],
@@ -246,13 +249,13 @@ def configure_style(root: tk.Misc) -> None:
               bordercolor=[("!disabled", BORDER), ("disabled", BORDER)],
               lightcolor=[("!disabled", BORDER)], darkcolor=[("!disabled", BORDER)])
 
-    style.configure("Danger.TButton", padding=(18, 10), font=font("BODY"),
+    style.configure("Danger.TButton", relief="flat", padding=(12, 8), font=font("BODY"),
                     background=DANGER, foreground=TEXT_ON_ACCENT, borderwidth=0, focusthickness=0)
     style.map("Danger.TButton",
               background=[("pressed", DANGER_HOVER), ("active", DANGER_HOVER), ("disabled", DANGER_DISABLED)],
               foreground=[("disabled", DANGER_DISABLED_TEXT)])
 
-    style.configure("TCombobox", fieldbackground=BG_SURFACE, background=BG_SURFACE,
+    style.configure("TCombobox", fieldbackground=BG_INPUT_IDLE, background=BG_SURFACE,
                     bordercolor=BORDER, lightcolor=BORDER, darkcolor=BORDER,
                     arrowcolor=TEXT_BODY, padding=(8, 6))
     style.map("TCombobox",

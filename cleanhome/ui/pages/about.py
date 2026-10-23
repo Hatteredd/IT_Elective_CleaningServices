@@ -14,8 +14,10 @@ class About(templates.PageTemplate):
     page_name = "About"
 
     def build(self, **kwargs) -> None:
+        theme.configure_style(self)
         super().build(**kwargs)
         body = self.body
+        # Removed body.configure(bg=theme.BG_PAGE) - ttk.Frame uses style directly
 
         header = templates.page_header(
             body, f"About {config.COMPANY_NAME}",
@@ -26,6 +28,8 @@ class About(templates.PageTemplate):
         story = templates.card(body)
         story.pack(fill="x", pady=(theme.SPACE_LG, 0))
         story_inner = templates.card_body(story)
+        # story_inner is a tk.Frame, so bg is valid
+        story_inner.configure(bg=theme.BG_SURFACE)
         components.SubheadingLabel(story_inner, text="What we do", surface=True).pack(anchor="w")
         components.BodyLabel(story_inner,
                  text="We send background-checked cleaners to homes and offices across "
@@ -57,6 +61,7 @@ class About(templates.PageTemplate):
         areas = templates.card(body)
         areas.pack(fill="x", pady=(theme.SPACE_LG, 0))
         areas_inner = templates.card_body(areas)
+        areas_inner.configure(bg=theme.BG_SURFACE)
         components.SubheadingLabel(areas_inner, text="Service areas", surface=True).pack(anchor="w")
         components.BodyLabel(areas_inner, text=config.SERVICE_AREAS, wraplength=theme.WRAP_FULL,
                  justify="left", surface=True).pack(anchor="w", pady=(theme.SPACE_SM, 0))

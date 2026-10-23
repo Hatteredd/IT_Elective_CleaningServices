@@ -53,7 +53,7 @@ class PageTemplate(Page):
 
         inner = self.scroller.inner
         inner.grid_columnconfigure(0, weight=1)
-        self.body = ttk.Frame(inner, style="TFrame")
+        self.body = tk.Frame(inner, bg=theme.BG_PAGE)
         self.body.grid(row=0, column=0, sticky="nsew", padx=theme.SPACE_XL,
                        pady=theme.SPACE_XL)
         self.scroller.canvas.bind("<Configure>", self._fit_content_width, add="+")
@@ -84,13 +84,13 @@ class AuthTemplate(Page):
         self.navbar = components.NavBar(self, self.app, active=self.page_name)
         self.navbar.grid(row=0, column=0, sticky="ew")
 
-        holder = ttk.Frame(self, style="TFrame")
+        holder = tk.Frame(self, bg=theme.BG_PAGE)
         holder.grid(row=1, column=0, sticky="nsew", padx=theme.SPACE_XL,
                     pady=theme.SPACE_XL)
         holder.grid_columnconfigure(0, weight=1)
         holder.grid_rowconfigure(0, weight=1)
 
-        self.body = ttk.Frame(holder, style="TFrame")
+        self.body = tk.Frame(holder, bg=theme.BG_PAGE)
         self.body.grid(row=0, column=0, sticky="n")
 
 
@@ -106,13 +106,11 @@ def page_header(parent, title: str, subtitle: str = "") -> tk.Frame:
 
 
 def card(parent, padding: int = theme.CARD_PAD) -> tk.Frame:
-    """Return a white card: a 1px border plus a soft bottom/right shadow edge."""
-    outer = tk.Frame(parent, bg=theme.SHADOW_EDGE)
-    inner = tk.Frame(outer, bg=theme.BG_SURFACE, highlightbackground=theme.BORDER,
-                     highlightthickness=theme.BORDER_WIDTH, bd=0,
-                     padx=padding, pady=padding)
-    inner.pack(fill="both", expand=True, padx=(0, theme.BORDER_WIDTH),
-               pady=(0, theme.BORDER_WIDTH))
+    """Return a white card with crisp 1px border."""
+    outer = tk.Frame(parent, bg=theme.BG_SURFACE, highlightbackground=theme.BORDER,
+                     highlightthickness=1, bd=0)
+    inner = tk.Frame(outer, bg=theme.BG_SURFACE, padx=padding, pady=padding)
+    inner.pack(fill="both", expand=True)
     outer.inner = inner
     return outer
 

@@ -56,7 +56,7 @@ class MyBookings(templates.PageTemplate):
             components.CaptionLabel(frame, text=empty).pack(
                 anchor="w", padx=theme.SPACE_MD, pady=theme.SPACE_MD)
             if label == "Upcoming":
-                components.SecondaryButton(frame, "Browse Services",
+                components.PrimaryButton(frame, "Browse Services",
                                            command=lambda: self.app.go("Services")
                                            ).pack(anchor="w", padx=theme.SPACE_MD)
             return

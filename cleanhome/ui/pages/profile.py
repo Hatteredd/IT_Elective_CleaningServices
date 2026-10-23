@@ -31,13 +31,10 @@ class Profile(templates.FormMixin, templates.PageTemplate):
 
         self.full_name = components.FormField(inner, "Full name", required=True)
         self.full_name.pack(fill="x", pady=(0, theme.SPACE_MD))
-        # Email is read-only — show it as a labelled value, not an editable field
-        email_row = tk.Frame(inner, bg=theme.BG_SURFACE)
-        email_row.pack(fill="x", pady=(0, theme.SPACE_MD))
-        ttk.Label(email_row, text="Email", style="Caption.TLabel").pack(anchor="w")
-        components.BodyLabel(email_row,
-                             text=self.session.user.get("email", ""),
-                             surface=True).pack(anchor="w", pady=(theme.SPACE_XS, 0))
+        # Email can be edited by everyone
+        self.email = components.FormField(inner, "Email")
+        self.email.pack(fill="x", pady=(0, theme.SPACE_MD))
+        self.email.set(self.session.user.get("email", ""))
         self.phone = components.FormField(inner, "Mobile number")
         self.phone.pack(fill="x", pady=(0, theme.SPACE_MD))
         self.address = components.FormField(inner, "Default address")
@@ -67,8 +64,9 @@ class Profile(templates.FormMixin, templates.PageTemplate):
     def _save(self) -> None:
         self.clear_form_errors()
         try:
+            email = self.email.get()
             user = auth_service.update_profile(
-                self.session.user, self.full_name.get(), self.phone.get(), self.address.get())
+                self.session.user, self.full_name.get(), self.phone.get(), self.address.get(), email=email)
         except ValidationError as error:
             self.show_field_error(error)
             return
