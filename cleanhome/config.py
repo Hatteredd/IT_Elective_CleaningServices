@@ -72,6 +72,9 @@ DATE_PICKER_DAYS = 60
 # How many days back and forward the report date pickers reach.
 REPORT_WINDOW_DAYS = 30
 
+# How many services the revenue chart on the report screen shows.
+REPORT_CHART_SERVICES = 8
+
 # Service duration limits, in minutes.
 MIN_DURATION_MINUTES = 15
 MAX_DURATION_MINUTES = 480

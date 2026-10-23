@@ -642,6 +642,8 @@ class BarChart(tk.Frame):
         span = (right - left) / len(self._values)
         bar_width = max(1.0, span * theme.CHART_BAR_RATIO)
         for index, (label, value) in enumerate(zip(self._labels, self._values)):
+            if len(label) > theme.CHART_COLUMN_LABEL_MAX_CHARS:
+                label = label[:theme.CHART_COLUMN_LABEL_MAX_CHARS - 1] + "…"
             center = left + span * (index + 0.5)
             bar_top = bottom - (value / peak) * (bottom - top)
             if value > 0:

@@ -583,6 +583,20 @@ def check_reports(app: CleanHomeApp) -> None:
     page._run()
     app.update()
     check("the report table is filled", len(page.table_frame.winfo_children()) > 0)
+
+    def find_chart(widget):
+        for child in widget.winfo_children():
+            if isinstance(child, components.BarChart):
+                return child
+            found = find_chart(child)
+            if found is not None:
+                return found
+        return None
+
+    chart = find_chart(page.chart_frame)
+    check("the report chart is drawn",
+          chart is not None and len(chart.canvas.find_all()) > 0)
+
     page._copy_summary()
     app.update()
     check("the report summary can be copied",

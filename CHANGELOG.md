@@ -22,6 +22,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/).
   to cleanly delineate the navigation header from the page body.
 * **Notebook tab styling:** Added explicit foreground and font styles for
   selected tabs on Windows ttk themes.
+* **Reports revenue chart:** The admin Reports tab now shows a bar chart of
+  completed revenue per service for the selected range, above the existing
+  breakdown table.
 
 ### Changed
 

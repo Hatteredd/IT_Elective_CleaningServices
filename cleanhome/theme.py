@@ -156,6 +156,7 @@ CHART_BAR_RATIO = 0.55
 CHART_BAR_MIN_HEIGHT = 2
 CHART_LABEL_GAP = 6
 CHART_VALUE_GAP = 4
+CHART_COLUMN_LABEL_MAX_CHARS = 14   # longer column labels are truncated
 
 # ── Table column widths (in pixels) ───────────────────────────────────────────
 BOOKINGS_TABLE_WIDTHS = (40, 110, 150, 110, 130, 140, 170, 80, 70)

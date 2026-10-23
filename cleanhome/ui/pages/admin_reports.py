@@ -44,6 +44,8 @@ class AdminReports(templates.AdminTemplate):
 
         self.summary = tk.Frame(body, bg=theme.BG_PAGE)
         self.summary.pack(fill="x")
+        self.chart_frame = tk.Frame(body, bg=theme.BG_PAGE)
+        self.chart_frame.pack(fill="x", pady=(theme.SPACE_MD, 0))
         self.table_frame = tk.Frame(body, bg=theme.BG_PAGE)
         self.table_frame.pack(fill="both", expand=True, pady=(theme.SPACE_MD, 0))
         self._run()
@@ -81,9 +83,27 @@ class AdminReports(templates.AdminTemplate):
             card.grid(row=0, column=index, sticky="nsew",
                       padx=(0 if index == 0 else theme.SPACE_SM, 0))
 
+        for child in self.chart_frame.winfo_children():
+            child.destroy()
+        top_services = report["revenue_per_service"][:config.REPORT_CHART_SERVICES]
+        chart_card = templates.card(self.chart_frame)
+        chart_card.pack(fill="x")
+        chart_inner = templates.card_body(chart_card)
+        components.SubheadingLabel(chart_inner, text="Revenue by service",
+                                   surface=True).pack(anchor="w")
+        components.CaptionLabel(
+            chart_inner,
+            text="Completed revenue per service in the selected range.",
+            surface=True).pack(anchor="w")
+        components.BarChart(
+            chart_inner,
+            [row["service_name"] for row in top_services],
+            [row["revenue"] for row in top_services],
+        ).pack(fill="both", expand=True, pady=(theme.SPACE_SM, 0))
+
         for child in self.table_frame.winfo_children():
             child.destroy()
-        components.SubheadingLabel(self.table_frame, text="Revenue by service", surface=False).pack(anchor="w",
+        components.SubheadingLabel(self.table_frame, text="Service breakdown", surface=False).pack(anchor="w",
                                                             pady=(theme.SPACE_MD, theme.SPACE_SM))
         columns = ("service", "bookings", "revenue")
         table = components.DataTable(self.table_frame, columns,
